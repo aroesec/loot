@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env*.local
+.vercel
+.agents
+.claude
+docs
+test
+*.md
+ledger-snapshot*.json
+tsconfig.tsbuildinfo

@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push supersedes an in-flight run on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # `env.ts` validates at module load and the build imports it, so these have
+    # to exist for the build to run at all. They are placeholders: nothing here
+    # reaches a real database, and no AI or Plaid keys are set, which also
+    # exercises the "runs with no provider configured" path.
+    env:
+      DATABASE_URL: postgres://ci/ci
+      APP_PASSWORD: ci-placeholder
+      SESSION_SECRET: ci-placeholder-secret-at-least-32-chars
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # The self-host path is the one most likely to break unnoticed, because
+      # nobody developing on this runs it. Building it here is the only thing
+      # standing between a broken Dockerfile and someone's first clone.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  migrations:
+    name: Migrations apply to a clean database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: loot
+          POSTGRES_PASSWORD: loot
+          POSTGRES_DB: loot
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U loot"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://loot:loot@localhost:5432/loot
+      APP_PASSWORD: ci-placeholder
+      SESSION_SECRET: ci-placeholder-secret-at-least-32-chars
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Catches a migration that only works against a database which already
+      # has the previous schema — the failure a developer never sees, because
+      # their own database has been migrated incrementally all along.
+      - name: Migrate from scratch
+        run: pnpm tsx src/db/migrate.ts
+
+      # Seeding twice proves it is idempotent, which the app relies on: the
+      # Docker entrypoint seeds on every start.
+      - name: Seed, then seed again
+        run: |
+          pnpm tsx src/db/seed.ts
+          pnpm tsx src/db/seed.ts

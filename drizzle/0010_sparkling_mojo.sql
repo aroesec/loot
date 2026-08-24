@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ALTER COLUMN "timezone" SET DEFAULT 'UTC';

@@ -1,0 +1,1 @@
+ALTER TABLE "merchant_rules" ADD COLUMN "queue_for_review" boolean DEFAULT false NOT NULL;

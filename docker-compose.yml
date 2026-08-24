@@ -1,0 +1,109 @@
+# Self-hosted Loot: the app plus its database, nothing else required.
+#
+#   cp .env.example .env
+#   # fill in APP_PASSWORD_HASH (pnpm auth:hash) and SESSION_SECRET
+#   docker compose up -d
+#
+# Postgres is deliberately not published to the host. The app reaches it over
+# the compose network, and nothing else needs to — a database holding every
+# transaction you have ever made should not be listening on 5432 by default.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: loot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-loot}
+      POSTGRES_DB: loot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # The app runs migrations at startup, so it must not start before the
+      # database can actually answer.
+      test: ["CMD-SHELL", "pg_isready -U loot -d loot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgres://loot:${POSTGRES_PASSWORD:-loot}@db:5432/loot
+
+      # --- Auth: at least one method is required ---
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH:-}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      SESSION_VERSION: ${SESSION_VERSION:-1}
+
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_ALLOWED_USERS: ${OIDC_ALLOWED_USERS:-}
+
+      AUTH_PROXY_HEADER: ${AUTH_PROXY_HEADER:-}
+      AUTH_PROXY_USERS: ${AUTH_PROXY_USERS:-}
+
+      # --- Optional: categorization and statement reading ---
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+
+      # --- Optional: bank syncing ---
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
+      PLAID_SECRET: ${PLAID_SECRET:-}
+      PLAID_ENV: ${PLAID_ENV:-sandbox}
+      PLAID_TOKEN_KEY: ${PLAID_TOKEN_KEY:-}
+
+      # Shared secret for the scheduled sync below.
+      CRON_SECRET: ${CRON_SECRET:-}
+
+      # --- Optional: push notifications (pnpm push:keys) ---
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+
+      # --- Optional: text messages via Twilio ---
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      ALERT_PHONE: ${ALERT_PHONE:-}
+
+  # Daily sync. Vercel runs this from its own scheduler; self-hosting needs
+  # something to make the call, and a tiny curl loop beats adding a scheduler.
+  #
+  # Cheap by design: transactions/sync sends only what changed since the
+  # cursor, so a run moves kilobytes, and Plaid bills Transactions per Item per
+  # month rather than per call — syncing daily costs the same as monthly.
+  #
+  # Remove this service if you would rather trigger syncs by hand.
+  cron:
+    image: curlimages/curl:latest
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          # Drift-free-ish: sleep to the next 11:00 UTC rather than a fixed
+          # interval, so a restart does not shift the schedule permanently.
+          now=$$(date -u +%s)
+          next=$$(date -u -d "today 11:00" +%s 2>/dev/null || echo $$((now + 86400)))
+          [ "$$next" -le "$$now" ] && next=$$((next + 86400))
+          sleep $$((next - now))
+          curl -sS -m 600 -H "Authorization: Bearer $$CRON_SECRET" \
+            http://app:3000/api/cron/sync || echo "sync failed, will retry tomorrow"
+        done
+
+volumes:
+  pgdata:

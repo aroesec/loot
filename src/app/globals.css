@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+/*
+ * Every color in the app resolves through these variables, which are written
+ * into the document head from the theme stored in the database. Nothing below
+ * this block hardcodes a color, so retheming is a data change, not a code
+ * change.
+ *
+ * The fallbacks here matter: they're what renders if the database is
+ * unreachable on first paint.
+ */
+@theme inline {
+  --color-bg: var(--bg, #fbfaf7);
+  --color-bg-subtle: var(--bg-subtle, #f3f1ea);
+  --color-surface: var(--surface, #ffffff);
+  --color-surface-raised: var(--surface-raised, #ffffff);
+  --color-border: var(--border, #e5e1d8);
+  --color-border-strong: var(--border-strong, #d2ccbf);
+  --color-ink: var(--ink, #16150f);
+  --color-ink-muted: var(--ink-muted, #6b675e);
+  --color-ink-faint: var(--ink-faint, #969188);
+  --color-accent: var(--accent, #1a6b52);
+  --color-accent-ink: var(--accent-ink, #ffffff);
+  --color-accent-soft: var(--accent-soft, #e4f0ea);
+  --color-positive: var(--positive, #1a6b52);
+  --color-negative: var(--negative, #a6402f);
+  --color-negative-soft: var(--negative-soft, #f7e8e4);
+  --color-warning: var(--warning, #a9761f);
+  --color-warning-soft: var(--warning-soft, #f8eedc);
+
+  --radius-token: var(--radius, 10px);
+  --radius-token-lg: var(--radius-lg, 16px);
+
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * Figures are the reason this app exists, so they get tabular numerals
+   * everywhere — columns of money that don't line up are hard to scan.
+   */
+  .figure {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+  }
+
+  h1,
+  h2,
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer components {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-token-lg);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-token);
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      opacity 120ms ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--color-bg-subtle);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-accent);
+    opacity: 0.9;
+  }
+
+  .field {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-token);
+    border: 1px solid var(--color-border-strong);
+    background: var(--color-surface);
+    font-size: 0.875rem;
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+
+  /* Wide tables must scroll inside their own container, never the page. */
+  .scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@layer utilities {
+  .text-positive {
+    color: var(--color-positive);
+  }
+  .text-negative {
+    color: var(--color-negative);
+  }
+  .text-warning {
+    color: var(--color-warning);
+  }
+}
+
+/*
+  Progressive enhancement: controls that submit themselves on change keep a
+  visible submit button for browsers without JavaScript, and hide it when the
+  pre-paint script has marked the document as scripted.
+*/
+.js .js-hidden {
+  display: none;
+}

@@ -1,0 +1,82 @@
+name: Bug report
+description: Something is broken, or a number is wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste real statement data, account numbers or access tokens.
+        Change the merchant names and round the amounts. The shape of the
+        problem is what matters.
+
+        For anything security related, use
+        [private reporting](https://github.com/aroesec/loot/security/advisories/new)
+        instead of this form.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the number you saw and the number you expected, if it is that kind of bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Upload a CSV with ...
+        2. Open the month view
+        3. Groceries shows ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - Classification or the review queue
+        - Statement import or parsing
+        - Bank syncing (Plaid)
+        - Budgets, trends or reports
+        - Alerts (push or SMS)
+        - MCP server
+        - Setup, migrations or deployment
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Commit SHA or release tag.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How is it running
+      options:
+        - pnpm dev (local)
+        - Docker Compose
+        - Vercel
+        - Another Node host
+    validations:
+      required: true
+
+  - type: input
+    id: postgres
+    attributes:
+      label: Postgres version
+      placeholder: "18.6, Neon"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Scrubbed of connection strings, which contain the database password.
+      render: shell

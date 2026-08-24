@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest something Loot should do
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: What you were trying to work out about your money, and what got in the way.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      description: See the scope section in CONTRIBUTING.md.
+      options:
+        - label: This does not require sending ledger data to a third party
+          required: true
+        - label: This works for a self-hosted, single-household deployment
+          required: true

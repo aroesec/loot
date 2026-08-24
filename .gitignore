@@ -1,0 +1,33 @@
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+
+# Env — never commit secrets
+.env
+.env.local
+.env*.local
+
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+.env*
+# ...but the template has to ship: the README and both deploy paths
+# tell people to copy it.
+!.env.example
+
+# Vercel — contains your org and project IDs
+.vercel
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Agent tooling — machine-local
+.agents/
+.claude/
+skills-lock.json
+
+# Database dumps
+backups/

@@ -1,0 +1,87 @@
+{
+  "name": "loot",
+  "version": "0.1.0",
+  "description": "A self-hosted personal finance ledger: reads your statements, classifies every transaction, and tells you what the month actually cost.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aroesec/loot.git"
+  },
+  "homepage": "https://github.com/aroesec/loot#readme",
+  "bugs": {
+    "url": "https://github.com/aroesec/loot/issues"
+  },
+  "keywords": [
+    "personal-finance",
+    "budgeting",
+    "ledger",
+    "self-hosted",
+    "plaid",
+    "nextjs",
+    "postgres"
+  ],
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file=.env.local src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx --env-file=.env.local src/db/seed.ts",
+    "db:reclassify": "tsx --env-file=.env.local src/db/reclassify.ts",
+    "push:keys": "tsx src/db/push-keys.ts",
+    "auth:hash": "tsx src/db/hash-password.ts",
+    "db:audit-income": "tsx --env-file=.env.local src/db/audit-income.ts",
+    "db:reconcile-debt": "tsx --env-file=.env.local src/db/reconcile-debt.ts",
+    "db:audit-cards": "tsx --env-file=.env.local src/db/audit-cards.ts",
+    "db:backup": "tsx --env-file=.env.local src/db/backup.ts",
+    "db:audit-period": "tsx --env-file=.env.local src/db/audit-period.ts",
+    "db:plaid-status": "tsx --env-file=.env.local src/db/plaid-status.ts",
+    "db:backfill-accounts": "tsx --env-file=.env.local src/db/backfill-accounts.ts",
+    "db:rebuild-statement": "tsx --env-file=.env.local src/db/rebuild-statement.ts",
+    "env:pull": "vercel env pull .env.local",
+    "mcp:issue": "tsx --env-file=.env.local src/lib/mcp/cli.ts issue",
+    "mcp:list": "tsx --env-file=.env.local src/lib/mcp/cli.ts list",
+    "mcp:revoke": "tsx --env-file=.env.local src/lib/mcp/cli.ts revoke",
+    "icons": "tsx --env-file=.env.local src/db/icons.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "drizzle-orm": "^0.45.2",
+    "geist": "^1.5.1",
+    "jose": "^6.1.0",
+    "next": "^15.5.4",
+    "plaid": "^46.0.0",
+    "postgres": "^3.4.7",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-plaid-link": "^5.0.0",
+    "web-push": "^3.6.7",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@types/web-push": "^3.6.4",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}
