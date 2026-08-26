@@ -1,0 +1,39 @@
+# This app holds financial data and a Plaid credential, so a known
+# vulnerability in a transitive dependency matters more than the noise of
+# keeping up. Security updates are ungrouped so they arrive on their own;
+# everything else is batched monthly to keep the PR volume survivable for a
+# small project.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      production:
+        applies-to: version-updates
+        dependency-type: production
+        update-types: [minor, patch]
+      development:
+        applies-to: version-updates
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Next major versions carry migrations of their own; take them by hand.
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
