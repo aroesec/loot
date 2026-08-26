@@ -20,6 +20,13 @@ updates:
         dependency-type: development
         update-types: [minor, patch]
     ignore:
+      # TypeScript 7 is the native compiler rewrite, and Next.js 15 cannot use
+      # it: `next build` dies with "Cannot read properties of undefined
+      # (reading 'fileExists')" while `tsc --noEmit` and the tests both pass.
+      # Revisit when Next supports it; the repo is otherwise ready, since
+      # src/css.d.ts already fixes the one type error 7 raises.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
       # Next major versions carry migrations of their own; take them by hand.
       - dependency-name: next
         update-types: [version-update:semver-major]
