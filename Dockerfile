@@ -6,15 +6,28 @@
 # source: deps for the install cache, build for the compile, runner for what
 # actually ships.
 
-FROM node:22-alpine AS deps
+# Pinned to a patch, not a moving `22-alpine` tag. An image rebuild upstream
+# should never change what this produces.
+ARG NODE_IMAGE=node:22.21-alpine
+
+# pnpm is installed directly rather than through corepack. corepack is no
+# longer reliably present in the Node images and `corepack enable` started
+# failing with exit 127 mid-build — a break that arrives on a stranger's
+# machine, on the path they use to self-host, with nothing changed here.
+# Kept in step with `packageManager` in package.json.
+ARG PNPM_VERSION=11.20.0
+
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
-RUN corepack enable
+ARG PNPM_VERSION
+RUN npm install -g pnpm@${PNPM_VERSION}
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-FROM node:22-alpine AS build
+FROM ${NODE_IMAGE} AS build
 WORKDIR /app
-RUN corepack enable
+ARG PNPM_VERSION
+RUN npm install -g pnpm@${PNPM_VERSION}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Next validates env at build time for statically analysed routes. These are
@@ -25,7 +38,7 @@ ENV BUILD_STANDALONE=true \
     SESSION_SECRET=build-time-placeholder-value-32chars
 RUN pnpm build
 
-FROM node:22-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 

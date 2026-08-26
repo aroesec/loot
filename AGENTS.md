@@ -81,6 +81,11 @@ resets that to whatever the rule says. Skip it and real spending disappears.
 
 - Vercel and Docker Compose are both documented in
   [docs/deploy.md](docs/deploy.md). Nothing in the code is specific to either.
+- **Pin base images to a patch.** `node:22-alpine` is a moving tag, and an
+  upstream rebuild dropped corepack, so `corepack enable` began failing with
+  exit 127 in a build that had changed nothing. pnpm is installed with `npm
+  install -g pnpm@$PNPM_VERSION`, kept in step with `packageManager`. That break
+  lands on a stranger's machine, on the path they use to self-host.
 - **Schema deploys separately from code, and the schema goes first.**
   `db:migrate` and `db:seed` run from a developer machine against the database
   directly, so a live deployment can be running old code against a new schema.
