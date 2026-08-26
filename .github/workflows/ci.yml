@@ -61,7 +61,7 @@ jobs:
       # nobody developing on this runs it. Building it here is the only thing
       # standing between a broken Dockerfile and someone's first clone.
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
