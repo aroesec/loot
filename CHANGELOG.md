@@ -6,13 +6,9 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
-- Split a transaction across several categories, reversibly
-- Export the whole ledger as CSV or JSON
-- Dependabot
-
 ## 0.1.0
 
-First tagged release.
+First tagged release. Images at `ghcr.io/aroesec/loot`.
 
 ### Ledger
 - CSV and PDF statement import, with fingerprint deduplication so the same
@@ -34,6 +30,11 @@ First tagged release.
 - Business mode: profit and loss, quarterly periods, Schedule C summary with
   CSV export, and an estimated tax set-aside
 
+### Getting data in and out
+- Split a transaction across several categories, reversibly, with an audit that
+  proves every split still sums to what it replaced
+- Export the whole ledger as CSV or JSON, with no lock-in
+
 ### Platform
 - Optional bank syncing through Plaid, with two years of history
 - Alerts by web push or SMS, rate limited to what is worth an interruption
@@ -42,3 +43,5 @@ First tagged release.
   disagrees with the database
 - Full data export as CSV or JSON
 - Installable as a PWA, which is what makes notifications work on iOS
+- Prebuilt Docker images published to GHCR on every push to `main`
+- Dependabot, with majors held back until they are actually tested
