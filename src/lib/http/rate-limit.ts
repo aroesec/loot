@@ -102,6 +102,8 @@ export function resetLimits(): void {
  * push is configured is nearly free.
  */
 export const POLICIES = {
+  /** Reads and serializes the entire ledger. */
+  export: { name: "export", limit: 20, windowMs: 60 * 60 * 1000 },
   /** A CSV import: parsing, dedupe, and a model pass over every new row. */
   upload: { name: "upload", limit: 10, windowMs: 60 * 60 * 1000 },
   /** Billed by Plaid per call, and the provider rate-limits it too. */

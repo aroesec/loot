@@ -227,6 +227,8 @@ is set. That path must keep working: it is how most people will first run this.
 - Add multi-tenancy. One household, one deployment, one database.
 - Send ledger data to a third party, or add a feature that needs a hosted service
   to work.
+- Put a credential in the export. Plaid tokens, push subscriptions and MCP token
+  hashes are excluded on purpose; none of them is the person's ledger.
 - Cache financial pages in the service worker. It would serve a stale balance
   after logout.
 - Commit anything from `.env.local`, `backups/`, or `.vercel/`.

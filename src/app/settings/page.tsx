@@ -456,6 +456,33 @@ export default async function SettingsPage({
           ) : null}
         </Card>
 
+        {/* --- Export ------------------------------------------------- */}
+        <Card className="lg:col-span-2">
+          <h2 className="text-lg">Export your data</h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+            {/*
+              Stated plainly because the promise is worth nothing if leaving is
+              hard. Every correction and learned rule is original work that
+              exists nowhere else.
+            */}
+            Everything in this ledger, whenever you want it. The CSV opens in a
+            spreadsheet; the JSON carries the categories, rules and corrections
+            as well, which is what another deployment would need.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a href="/api/export?format=csv" className="btn">
+              Transactions (CSV)
+            </a>
+            <a href="/api/export?format=json" className="btn">
+              Everything (JSON)
+            </a>
+          </div>
+          <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
+            Bank access tokens, push subscriptions and API tokens are left out.
+            None of them is your ledger, and the first is a live credential.
+          </p>
+        </Card>
+
         {/* --- Categories --------------------------------------------- */}
         <Card className="lg:col-span-2">
           <h2 className="text-lg">Categories</h2>

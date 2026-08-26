@@ -33,6 +33,7 @@ Restaurants       $612.40   ▇▇▇▇▇▇
 * Alerts by web push or SMS, only when something is actually worth saying
 * An MCP server, so you can ask Claude what you spent and log purchases by
   voice
+* Export everything as CSV or JSON, whenever you want, with no lock-in
 
 ## Setup
 
