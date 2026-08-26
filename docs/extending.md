@@ -136,7 +136,7 @@ able to destroy a record.
 
 ## Working on the classifier
 
-`CLAUDE.md` documents why things are the way they are, usually with the bug
+`DESIGN.md` documents why things are the way they are, usually with the bug
 that caused them. Several regressions are pinned by tests in `test/`, and the
 comments say what breaks if you undo them.
 

@@ -99,7 +99,9 @@ docker compose up -d
 | [plaid.md](docs/plaid.md) | Bank syncing |
 | [ai.md](docs/ai.md) | Model providers, including local ones |
 | [extending.md](docs/extending.md) | Adding sources, providers and channels |
-| [CLAUDE.md](CLAUDE.md) | Why the design is the way it is |
+| [AGENTS.md](AGENTS.md) | Conventions and invariants, for humans and coding agents |
+| [DESIGN.md](DESIGN.md) | Why the design is the way it is |
+| [TESTING.md](TESTING.md) | What is worth testing here, and what is not |
 
 ## Commands
 
@@ -123,7 +125,7 @@ required to run the app.
 ## Contributing
 
 [CONTRIBUTING.md](CONTRIBUTING.md) covers setup and the invariants worth
-knowing before changing anything. [CLAUDE.md](CLAUDE.md) explains why the
+knowing before changing anything. [DESIGN.md](DESIGN.md) explains why the
 design is the way it is, usually by naming the bug that caused it.
 
 Security reports go through

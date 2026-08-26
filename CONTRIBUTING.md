@@ -23,9 +23,10 @@ pnpm build
 CI runs those three, builds the Docker image, and applies every migration to a
 clean database. All of it has to pass.
 
-## Read CLAUDE.md first
+## Read AGENTS.md first
 
-It is the design document, and it is written as a list of invariants and the
+[AGENTS.md](AGENTS.md) holds the repo-wide conventions and the invariants
+table. [DESIGN.md](DESIGN.md) is the reasoning behind them, and it and it is written as a list of invariants and the
 bugs that produced them rather than a description of the code. Most of the
 non-obvious decisions here are load-bearing for reasons you cannot see from the
 code alone.
@@ -47,7 +48,11 @@ than making something crash:
 
 ## Tests
 
-The suite is mostly regressions with the reason written down. When you fix
+All test design follows [TESTING.md](TESTING.md). The suite runs in about half
+a second and nothing in it touches a database; both are properties worth
+protecting.
+
+It is mostly regressions with the reason written down. When you fix
 something, add the test that would have caught it and put the failure in the
 comment: not what the code does, but what went wrong and what it cost. It makes
 the suite readable a year later.
