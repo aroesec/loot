@@ -505,6 +505,23 @@ export const transactions = pgTable(
      */
     loggedAmountCents: bigint("logged_amount_cents", { mode: "number" }),
 
+    /*
+     * Splits.
+     *
+     * A split replaces one transaction with several siblings that sum to it,
+     * rather than a parent with children. 54 places in this codebase build
+     * their own transactions query; a parent row every one of them had to
+     * remember to exclude would double-count the moment one forgot, which is
+     * how $6,000 of spending once vanished from a month. Siblings are correct
+     * in every existing query without changing any of them.
+     *
+     * `split_group_id` is shared by the siblings so they can be shown together
+     * and merged back. `split_original_cents` is what the row was before, kept
+     * so the reversal does not have to trust a re-sum.
+     */
+    splitGroupId: uuid("split_group_id"),
+    splitOriginalCents: bigint("split_original_cents", { mode: "number" }),
+
     /**
      * sha256(account, date, amount, normalized description). Uploading an
      * overlapping statement re-derives the same hash and is skipped, which is

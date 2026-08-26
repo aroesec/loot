@@ -401,6 +401,44 @@ export async function setHouseholdAction(formData: FormData) {
  * on the answers, so leaving the optional fields blank still counts as set up
  * and does not re-open the flow on the next page load.
  */
+/**
+ * Split one transaction into parts that sum to it.
+ *
+ * The parts arrive as parallel `amount`/`categoryId` fields. Amounts are typed
+ * in dollars and converted here, once, at the boundary — a float must never
+ * reach the ledger, and rounding after summing would let two halves of a
+ * penny disappear.
+ */
+export async function splitTransactionAction(formData: FormData) {
+  await requireSession();
+
+  const id = String(formData.get("transactionId") ?? "");
+  const amounts = formData.getAll("amount").map(String);
+  const categoryIds = formData.getAll("categoryId").map(String);
+
+  const parts = amounts
+    .map((raw, i) => ({
+      amountCents: Math.round(Number(raw) * 100),
+      categoryId: categoryIds[i] ?? "",
+    }))
+    .filter((p) => p.categoryId && Number.isFinite(p.amountCents));
+
+  const { splitTransaction } = await import("@/lib/split");
+  const result = await splitTransaction(id, parts);
+
+  revalidatePath("/transactions");
+  revalidatePath("/");
+  return result.ok ? undefined : result.message;
+}
+
+export async function unsplitTransactionAction(formData: FormData) {
+  await requireSession();
+  const { unsplitTransaction } = await import("@/lib/split");
+  await unsplitTransaction(String(formData.get("groupId") ?? ""));
+  revalidatePath("/transactions");
+  revalidatePath("/");
+}
+
 export async function restartOnboardingAction() {
   await requireSession();
   const { resetOnboarding } = await import("@/lib/onboarding");

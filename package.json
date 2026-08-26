@@ -53,7 +53,8 @@
     "mcp:issue": "tsx --env-file=.env.local src/lib/mcp/cli.ts issue",
     "mcp:list": "tsx --env-file=.env.local src/lib/mcp/cli.ts list",
     "mcp:revoke": "tsx --env-file=.env.local src/lib/mcp/cli.ts revoke",
-    "icons": "tsx --env-file=.env.local src/db/icons.ts"
+    "icons": "tsx --env-file=.env.local src/db/icons.ts",
+    "db:audit-splits": "tsx --env-file=.env.local src/db/audit-splits.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

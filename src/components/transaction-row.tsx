@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { Money } from "./ui";
-import { recategorizeAction, deleteTransactionAction } from "@/app/actions";
+import {
+  recategorizeAction,
+  deleteTransactionAction,
+  unsplitTransactionAction,
+} from "@/app/actions";
+import { SplitForm } from "./split-form";
 import { REVIEW_THRESHOLD } from "@/lib/classify/constants";
+import { formatCents } from "@/lib/money";
 
 type Txn = {
   id: string;
@@ -20,6 +26,8 @@ type Txn = {
   reason: string | null;
   isTransfer: boolean;
   accountName: string | null;
+  splitGroupId: string | null;
+  splitOriginalCents: number | null;
 };
 
 const SOURCE_LABEL: Record<Txn["source"], string> = {
@@ -138,6 +146,41 @@ export function TransactionRow({
               Save
             </button>
           </form>
+
+          {/*
+            A split replaces this row with siblings that sum to it, so the
+            control is offered per transaction rather than as a bulk action.
+          */}
+          {txn.splitGroupId ? (
+            <form action={unsplitTransactionAction} className="mt-3">
+              <input type="hidden" name="groupId" value={txn.splitGroupId} />
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                Part of a split
+                {txn.splitOriginalCents
+                  ? ` of ${formatCents(txn.splitOriginalCents)}`
+                  : ""}
+                .
+              </p>
+              <button
+                type="submit"
+                className="mt-1 text-xs text-[var(--color-accent)] underline underline-offset-4"
+              >
+                Undo the split
+              </button>
+            </form>
+          ) : (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-ink)]">
+                Split across categories
+              </summary>
+              <SplitForm
+                transactionId={txn.id}
+                amountCents={txn.amountCents}
+                categoryId={txn.categoryId}
+                categories={categories}
+              />
+            </details>
+          )}
 
           <form action={deleteTransactionAction} className="mt-3">
             <input type="hidden" name="transactionId" value={txn.id} />

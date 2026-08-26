@@ -70,6 +70,8 @@ export default async function TransactionsPage({
         reason: transactions.classificationReason,
         isTransfer: transactions.isTransfer,
         accountName: accounts.name,
+      splitGroupId: transactions.splitGroupId,
+      splitOriginalCents: transactions.splitOriginalCents,
       })
       .from(transactions)
       .leftJoin(categories, eq(transactions.categoryId, categories.id))

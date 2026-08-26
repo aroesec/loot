@@ -33,6 +33,7 @@ Restaurants       $612.40   ▇▇▇▇▇▇
 * Alerts by web push or SMS, only when something is actually worth saying
 * An MCP server, so you can ask Claude what you spent and log purchases by
   voice
+* Split a transaction across categories, reversibly
 * Export everything as CSV or JSON, whenever you want, with no lock-in
 
 ## Setup
@@ -115,6 +116,7 @@ docker compose up -d
 | `pnpm db:reconcile-debt` | after any import or reclassify |
 | `pnpm db:backup` | verified `pg_dump` into `backups/` |
 | `pnpm db:audit-period [YYYY-MM]` | reconcile a month four ways |
+| `pnpm db:audit-splits` | prove every split still sums to its original |
 | `pnpm icons` | re-render app icons from the theme |
 
 ## Stack

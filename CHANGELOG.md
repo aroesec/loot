@@ -6,6 +6,10 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
+- Split a transaction across several categories, reversibly
+- Export the whole ledger as CSV or JSON
+- Dependabot
+
 ## 0.1.0
 
 First tagged release.
