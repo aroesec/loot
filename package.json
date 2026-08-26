@@ -57,11 +57,11 @@
     "db:audit-splits": "tsx --env-file=.env.local src/db/audit-splits.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.116.0",
+    "@anthropic-ai/sdk": "^0.120.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "drizzle-orm": "^0.45.2",
     "geist": "^1.5.1",
-    "jose": "^6.1.0",
+    "jose": "^6.2.10",
     "next": "^15.5.4",
     "plaid": "^46.0.0",
     "postgres": "^3.4.7",
