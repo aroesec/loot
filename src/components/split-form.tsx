@@ -46,6 +46,10 @@ export function SplitForm({
   const update = (i: number, patch: Partial<Part>) =>
     setParts((prev) => prev.map((p, n) => (n === i ? { ...p, ...patch } : p)));
 
+  // Two cents cannot go three ways, so the control that would ask for that is
+  // not offered.
+  const canAddPart = parts.length < Math.abs(amountCents);
+
   const addPart = () =>
     setParts((prev) => [
       ...prev,
@@ -115,32 +119,38 @@ export function SplitForm({
       ))}
 
       <div className="flex flex-wrap items-center gap-3 text-xs">
-        <button type="button" onClick={addPart} className="underline underline-offset-4">
-          Add a part
-        </button>
+        {canAddPart ? (
+          <button type="button" onClick={addPart} className="underline underline-offset-4">
+            Add a part
+          </button>
+        ) : null}
         <button type="button" onClick={even} className="underline underline-offset-4">
           Divide evenly
         </button>
 
         {/*
-          The remainder rather than a pass/fail message. It says how far off you
-          are and in which direction, which is the thing you need in order to
-          fix it.
+          The remainder for a sum mismatch, because "$4.00 left to assign" is
+          more use than "the parts are short". For anything else, the actual
+          problem.
+          
+          Showing only the remainder meant a zero part or a part pointing the
+          wrong way left this reading a green "Adds up" beside a disabled submit
+          button, with nothing on screen explaining the disagreement.
         */}
         <span
           className={
-            remainder === 0
-              ? "text-[var(--color-positive)]"
-              : "text-[var(--color-negative)]"
+            check.ok ? "text-[var(--color-positive)]" : "text-[var(--color-negative)]"
           }
         >
-          {remainder === 0
+          {check.ok
             ? "Adds up"
-            : `${formatCents(Math.abs(remainder))} ${
-                Math.abs(asCents.reduce((a, b) => a + b, 0)) < Math.abs(amountCents)
-                  ? "left to assign"
-                  : "over"
-              }`}
+            : check.problem.kind === "sum-mismatch"
+              ? `${formatCents(Math.abs(remainder))} ${
+                  Math.abs(asCents.reduce((a, b) => a + b, 0)) < Math.abs(amountCents)
+                    ? "left to assign"
+                    : "over"
+                }`
+              : check.problem.message}
         </span>
       </div>
 

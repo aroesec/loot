@@ -86,7 +86,8 @@ describe("divideEvenly", () => {
       for (const ways of [2, 3, 4, 7, 11]) {
         const parts = divideEvenly(total, ways);
         expect(parts.reduce((a, b) => a + b, 0)).toBe(total);
-        expect(parts).toHaveLength(ways);
+        expect(parts.length).toBeLessThanOrEqual(ways);
+        expect(parts.every((p) => p !== 0)).toBe(true);
       }
     }
   });
@@ -100,10 +101,29 @@ describe("divideEvenly", () => {
     expect(divideEvenly(-900, 3)).toEqual([-300, -300, -300]);
   });
 
-  it("handles an amount smaller than the number of parts", () => {
-    // Two cents three ways: one part has to be zero, and validateSplit will
-    // then reject it. Better that than inventing a cent.
-    expect(divideEvenly(-2, 3)).toEqual([-1, -1, 0]);
-    expect(divideEvenly(-2, 3).reduce((a, b) => a + b, 0)).toBe(-2);
+  it("returns fewer parts rather than an empty one", () => {
+    /*
+     * Two cents cannot go three ways. Returning [-1,-1,0] summed correctly, so
+     * the form reported "Adds up" while validateSplit rejected the zero part
+     * and disabled submit with nothing saying why.
+     */
+    expect(divideEvenly(-2, 3)).toEqual([-1, -1]);
+    expect(divideEvenly(-1, 4)).toEqual([-1]);
+    expect(divideEvenly(0, 3)).toEqual([]);
+  });
+
+  it("never returns a part that validateSplit would reject", () => {
+    // The two functions are used together, so they have to agree.
+    for (const total of [-2, -3, -100, 250, -99_999]) {
+      for (const ways of [2, 3, 5, 9]) {
+        const parts = divideEvenly(total, ways);
+        if (parts.length < 2) continue;
+        const check = validateSplit(
+          total,
+          parts.map((amountCents) => ({ amountCents, categoryId: "c" })),
+        );
+        expect(check.ok, `${total} into ${ways}: ${JSON.stringify(parts)}`).toBe(true);
+      }
+    }
   });
 });

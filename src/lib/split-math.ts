@@ -107,16 +107,25 @@ function fmt(cents: number): string {
 /**
  * Split an amount evenly, giving the remainder to the first parts.
  *
- * Integer cents do not divide evenly. $10.00 in three is 333, 333, 334 — never
+ * Integer cents do not divide evenly. $10.00 in three is 334, 333, 333 — never
  * 333.33 each, which would either lose a cent or introduce a float into a
  * ledger that has none. The remainder goes to the earliest parts so the result
  * is deterministic rather than depending on iteration order.
+ *
+ * **Returns at most `ways` parts, and never a zero one.** Two cents cannot go
+ * three ways; the honest answer is two parts of one cent, not three parts where
+ * one is empty. Returning the empty one produced a dead end in the form: the
+ * parts summed correctly, so it reported "Adds up", while `validateSplit`
+ * rejected the zero part and left the submit button disabled with nothing
+ * explaining why.
  */
 export function divideEvenly(totalCents: number, ways: number): number[] {
-  if (ways < 1) return [];
+  if (ways < 1 || totalCents === 0) return [];
 
   const sign = totalCents < 0 ? -1 : 1;
   const magnitude = Math.abs(totalCents);
+  // Never more parts than there are cents to give them.
+  ways = Math.min(ways, magnitude);
   const base = Math.floor(magnitude / ways);
   const remainder = magnitude - base * ways;
 
