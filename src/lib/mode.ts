@@ -147,3 +147,29 @@ export async function setHousehold(input: Household): Promise<void> {
       },
     });
 }
+
+
+/**
+ * Percentage of business profit to hold back for income tax.
+ *
+ * Supplied by the person, not derived. See the column comment in the schema:
+ * self-employment tax follows from profit, income tax does not.
+ */
+export async function estimatedTaxRate(): Promise<number> {
+  const [row] = await db
+    .select({ rate: settings.estimatedTaxRate })
+    .from(settings)
+    .where(eq(settings.id, "singleton"));
+  return row?.rate ?? 22;
+}
+
+export async function setEstimatedTaxRate(rate: number): Promise<void> {
+  const clamped = Math.max(0, Math.min(60, Math.round(rate)));
+  await db
+    .insert(settings)
+    .values({ id: "singleton", estimatedTaxRate: clamped })
+    .onConflictDoUpdate({
+      target: settings.id,
+      set: { estimatedTaxRate: clamped, updatedAt: new Date() },
+    });
+}

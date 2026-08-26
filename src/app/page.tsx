@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import {
   monthSummary,
@@ -28,6 +29,16 @@ export default async function OverviewPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   await requireAuth();
+
+  /*
+   * First run goes to the setup questions instead of an empty dashboard.
+   *
+   * Checked here rather than in middleware, which runs on the edge and cannot
+   * reach the database, and in the layout, which also renders /welcome itself
+   * and would redirect into a loop.
+   */
+  const { onboardingState } = await import("@/lib/onboarding");
+  if ((await onboardingState()).needed) redirect("/welcome");
 
   const params = await searchParams;
   const months = await availableMonths();

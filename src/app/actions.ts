@@ -392,6 +392,69 @@ export async function setHouseholdAction(formData: FormData) {
   revalidatePath("/settings");
 }
 
+/**
+ * Finish the first run.
+ *
+ * Writes the mode first, because it decides which chart of accounts everything
+ * afterwards is filed against, then the answers that only apply to that mode.
+ * `markOnboarded` records that the questions were asked; it is not conditional
+ * on the answers, so leaving the optional fields blank still counts as set up
+ * and does not re-open the flow on the next page load.
+ */
+export async function restartOnboardingAction() {
+  await requireSession();
+  const { resetOnboarding } = await import("@/lib/onboarding");
+  await resetOnboarding();
+  redirect("/welcome");
+}
+
+export async function completeOnboardingAction(formData: FormData) {
+  await requireSession();
+
+  const { setLedgerMode, setHousehold, setEstimatedTaxRate, household } =
+    await import("@/lib/mode");
+  const { markOnboarded } = await import("@/lib/onboarding");
+
+  const mode = formData.get("mode") === "business" ? "business" : "personal";
+
+  if (mode === "business") {
+    const name = String(formData.get("businessName") ?? "").trim();
+    await setLedgerMode("business", name || null);
+
+    const rate = Number(formData.get("rate"));
+    if (Number.isFinite(rate)) await setEstimatedTaxRate(rate);
+  } else {
+    await setLedgerMode("personal", null);
+
+    const current = await household();
+    const adults = Number(formData.get("adults"));
+    const children = Number(formData.get("children"));
+    const region = String(formData.get("region") ?? "").toUpperCase().slice(0, 2);
+
+    await setHousehold({
+      adults: Number.isFinite(adults) ? Math.max(1, Math.min(12, adults)) : current.adults,
+      children: Number.isFinite(children) ? Math.max(0, Math.min(12, children)) : current.children,
+      country: region ? "US" : current.country,
+      region: region || null,
+    });
+  }
+
+  await markOnboarded();
+
+  // The mode changes the navigation and the vocabulary on every page.
+  revalidatePath("/", "layout");
+  // Straight to importing, because an empty ledger answers nothing.
+  redirect("/upload");
+}
+
+export async function setEstimatedTaxRateAction(formData: FormData) {
+  await requireSession();
+  const { setEstimatedTaxRate } = await import("@/lib/mode");
+  await setEstimatedTaxRate(Number(formData.get("rate") ?? 22));
+  revalidatePath("/schedule-c");
+  revalidatePath("/settings");
+}
+
 export async function createCategoryAction(formData: FormData) {
   await requireSession();
   const name = String(formData.get("name") ?? "").trim();

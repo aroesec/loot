@@ -740,6 +740,25 @@ export const settings = pgTable("settings", {
    * little relation to a national figure.
    */
   region: text("region"),
+
+  /*
+   * Percentage of business profit to set aside for income tax.
+   *
+   * Supplied rather than computed. Self-employment tax follows from profit
+   * alone, but income tax depends on filing status, a spouse's income, other
+   * deductions and the rest of the return, none of which this app knows.
+   * Guessing it would put a made-up number next to an exact one.
+   */
+  estimatedTaxRate: integer("estimated_tax_rate").notNull().default(22),
+
+  /*
+   * When the first-run questions were answered.
+   *
+   * Records that the person was *asked*, not what they said. Inferring setup
+   * from the presence of transactions would re-open the flow for anyone who
+   * deleted their last row, and skip it for anyone who imported first.
+   */
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/goals", label: "Buffer & goals" },
   { href: "/cards", label: "Card payments" },
   { href: "/pl", label: "Profit & Loss", mode: "business" },
+  { href: "/schedule-c", label: "Schedule C", mode: "business" },
   { href: "/budgets", label: "Budgets", mode: "personal" },
   { href: "/recurring", label: "Recurring" },
   { href: "/review", label: "Review" },

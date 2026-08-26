@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "estimated_tax_rate" integer DEFAULT 22 NOT NULL;

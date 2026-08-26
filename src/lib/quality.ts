@@ -303,9 +303,17 @@ export type ProfileGap = {
  * and nothing about the resulting page looks broken.
  */
 export async function profileGaps(): Promise<ProfileGap[]> {
-  const { household } = await import("./mode");
-  const home = await household();
+  const { household, ledgerMode } = await import("./mode");
+  const [home, mode] = await Promise.all([household(), ledgerMode()]);
   const gaps: ProfileGap[] = [];
+
+  /*
+   * Household size and state only mean something for a personal ledger: they
+   * scale the comparison against published household averages, and a business
+   * has no household. Asking anyway put "How many people are in your
+   * household?" above the P&L on every page of a business deployment.
+   */
+  const comparesAgainstHouseholds = mode === "personal";
 
   const [defaults] = await db
     .select({
@@ -319,7 +327,12 @@ export async function profileGaps(): Promise<ProfileGap[]> {
    * told from "never set" — asked once here rather than assumed, and dismissed
    * by confirming it.
    */
-  if ((defaults?.adults ?? 0) > 0 && home.adults === 1 && home.children === 0) {
+  if (
+    comparesAgainstHouseholds &&
+    (defaults?.adults ?? 0) > 0 &&
+    home.adults === 1 &&
+    home.children === 0
+  ) {
     gaps.push({
       field: "household",
       prompt: "How many people are in your household?",
@@ -328,7 +341,7 @@ export async function profileGaps(): Promise<ProfileGap[]> {
     });
   }
 
-  if (home.country === "US" && !home.region) {
+  if (comparesAgainstHouseholds && home.country === "US" && !home.region) {
     gaps.push({
       field: "region",
       prompt: "Which state?",

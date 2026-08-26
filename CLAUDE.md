@@ -248,6 +248,60 @@ These are defaults for organizing records, not tax advice.
 profit`, plus quarterly periods because US estimated tax is paid on that
 cadence and is owed on profit rather than cashflow.
 
+## Tax reporting (`src/lib/tax.ts`, `tax-lines.ts`, `tax-math.ts`)
+
+`/schedule-c` groups a business year by the Schedule C line each category
+already carried. The data was modelled from the start and nothing surfaced it.
+
+**Two numbers, and the difference between them is the point.**
+Self-employment tax is *computed*: 15.3% of 92.35% of profit, with Social
+Security capped at the wage base and Medicare uncapped. Income tax is *not
+computable here* — it depends on filing status, a spouse's income, other
+deductions and the rest of the return — so it is a rate the person supplies.
+Showing a guessed figure beside an exact one makes both look equally
+authoritative, so the UI labels which is which every time.
+
+**The wage base is hardcoded per year** because it cannot be derived. An
+unlisted year falls back to the most recent known figure and reports
+`wageBaseExact: false` so the UI can say the cap is approximate. Ignoring the
+cap entirely overstates the bill by thousands for exactly the person most
+likely to rely on it.
+
+**Quarterly due dates are a literal table.** The periods are uneven — Q2 covers
+two months, Q4 is paid the following January — so deriving them from the
+quarter number gives three wrong answers.
+
+**Categories with no Schedule C line are reported, not absorbed.** Folding them
+into "other expenses" would invent an answer; the page shows the total and says
+it is excluded from the deductible figure.
+
+Owner's draw never reaches the form. Deducting it understates tax owed on a
+return, which is worse than mislabelling a report.
+
+`tax-lines.ts` holds the types, `lineOrder` and the CSV writer because `tax.ts`
+imports `@/db`.
+
+## Onboarding (`src/lib/onboarding.ts`, `/welcome`)
+
+First run asks personal or business before anything else, because that choice
+picks the chart of accounts and a month spent in the wrong one is a month filed
+against categories the reports never read. Previously it was a control in
+Settings that nothing pointed at.
+
+`onboarded_at` records that the questions were **asked**, not how they were
+answered. Inferring setup from the presence of transactions would re-open the
+flow for anyone who deleted their last row and skip it for anyone who imported
+first.
+
+The redirect lives in `app/page.tsx`: middleware runs on the edge and cannot
+reach the database, and the layout renders `/welcome` itself so it would
+redirect into a loop.
+
+`profileGaps` is mode-aware for the same reason — household size and state only
+mean something when comparing against household averages, and a business
+deployment was being asked "How many people are in your household?" above its
+P&L on every page.
+
 ## Ledger (`src/lib/ledger.ts`)
 
 All month/year/budget math lives here so no two pages can disagree.
