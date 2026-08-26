@@ -182,3 +182,17 @@ The app is a standard Next.js server. `BUILD_STANDALONE=true pnpm build`
 produces `.next/standalone`, which runs with `node server.js` and needs only
 `DATABASE_URL`, `SESSION_SECRET` and one auth method in the environment.
 Nothing is specific to Vercel or Docker.
+
+## Prebuilt images
+
+`ghcr.io/aroesec/loot` is published from `main` by CI.
+
+| Tag | Moves | Use for |
+|---|---|---|
+| `latest` | every push to `main` | trying it out |
+| `sha-<commit>` | never | anything you depend on |
+| `v0.1.0`, `0.1` | on release | tracking a release line |
+
+The image runs as an unprivileged user and expects the same environment
+variables as a source deployment. It does not run migrations on start; run
+`pnpm db:migrate` against the database first, as documented above.

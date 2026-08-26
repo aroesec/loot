@@ -85,9 +85,15 @@ usable either way.
 Any Node host and any Postgres. Docker Compose and Vercel are both covered in
 [docs/deploy.md](docs/deploy.md).
 
+A prebuilt image is published to GitHub Container Registry on every push to
+`main`, so you do not have to build it:
+
 ```sh
+docker pull ghcr.io/aroesec/loot:latest
 docker compose up -d
 ```
+
+Pin to a digest or a `sha-` tag for anything you care about. `latest` moves.
 
 ## Documentation
 
