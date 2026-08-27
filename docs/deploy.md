@@ -191,7 +191,10 @@ Nothing is specific to Vercel or Docker.
 |---|---|---|
 | `latest` | every push to `main` | trying it out |
 | `sha-<commit>` | never | anything you depend on |
-| `v0.1.0`, `0.1` | on release | tracking a release line |
+| `0.1.0`, `0.1` | on release | tracking a release line |
+
+Image tags carry no `v` prefix even though the git tags do: `v0.1.0` in git
+is `0.1.0` in the registry.
 
 The image runs as an unprivileged user and expects the same environment
 variables as a source deployment. It does not run migrations on start; run
