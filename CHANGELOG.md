@@ -6,6 +6,13 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
+## 0.1.1
+
+- Correct the registry tag in the docs: the git tag `v0.1.0` publishes as
+  `0.1.0`, and the released docs named a tag that does not exist
+- Remove a city name that had been scrubbed from the repo and reappeared in a
+  code comment
+
 ## 0.1.0
 
 First tagged release. Images at `ghcr.io/aroesec/loot`.
