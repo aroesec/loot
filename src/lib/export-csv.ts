@@ -4,7 +4,7 @@
  * DB-free so it can be tested without a database.
  *
  * The whole difficulty is that transaction descriptions are hostile to CSV by
- * nature. They contain commas (`SQ *CAFE, DENVER`), quotes, and occasionally a
+ * nature. They contain commas (`SQ *CAFE, SPRINGFIELD`), quotes, and occasionally a
  * newline from a badly parsed statement. Each of those silently shifts every
  * column to its right, so the file still opens and the numbers land under the
  * wrong headings — a wrong answer rather than an error, which is the failure
