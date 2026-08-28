@@ -5,6 +5,10 @@ import { ledgerMode, household } from "@/lib/mode";
 import { PageHeader } from "@/components/ui";
 import { OnboardingFlow } from "@/components/onboarding";
 import { completeOnboardingAction } from "../actions";
+import { db } from "@/db";
+import { plaidItems } from "@/db/schema";
+import { sql } from "drizzle-orm";
+import { hasPlaid, env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -24,17 +28,41 @@ export default async function WelcomePage() {
   // Nothing to do here twice. Settings can re-open it.
   if (!state.needed) redirect("/");
 
-  const [mode, home] = await Promise.all([ledgerMode(), household()]);
+  const [mode, home, plaidRows] = await Promise.all([
+    ledgerMode(),
+    household(),
+    db
+      .select({
+        id: plaidItems.id,
+        institutionName: plaidItems.institutionName,
+        status: plaidItems.status,
+        errorCode: plaidItems.errorCode,
+        lastSyncedAt: plaidItems.lastSyncedAt,
+        accountCount: sql<number>`(
+          select count(*)::int from accounts a where a.plaid_item_id = ${plaidItems.id}
+        )`,
+      })
+      .from(plaidItems)
+      .orderBy(plaidItems.createdAt),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Set up your ledger"
-        subtitle="Two questions, then you can import a statement."
+        subtitle="Personal or business — everything below updates as you switch."
       />
       <OnboardingFlow
         initialMode={mode}
         initialHousehold={home}
+        plaid={{
+          configured: hasPlaid,
+          environment: env.PLAID_ENV,
+          items: plaidRows.map((i) => ({
+            ...i,
+            lastSyncedAt: i.lastSyncedAt ? i.lastSyncedAt.toISOString() : null,
+          })),
+        }}
         onComplete={completeOnboardingAction}
       />
     </div>

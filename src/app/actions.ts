@@ -10,6 +10,7 @@ import {
   budgets,
   recurringSeries,
   accounts,
+  people,
 } from "@/db/schema";
 import {
   createSession,
@@ -33,7 +34,9 @@ import { createMcpToken, revokeMcpToken } from "@/lib/mcp/tokens";
 import { generateInsights, setInsightStatus } from "@/lib/insights";
 import { saveTheme, THEME_DEFAULTS, type ThemeTokens } from "@/lib/theme";
 import { currentMonth } from "@/lib/ledger";
-import { setLedgerMode, setHousehold } from "@/lib/mode";
+import { setLedgerMode, setHousehold, setBusinessLogo } from "@/lib/mode";
+import { validateLogo } from "@/lib/logo";
+import { validatePerson } from "@/lib/people-validate";
 
 async function requireSession() {
   if (!(await isAuthenticated())) redirect("/login");
@@ -360,6 +363,66 @@ export async function createAccountAction(formData: FormData) {
 }
 
 /**
+ * Update the business logo. Stored as base64, exactly as uploaded — this
+ * app does no runtime image processing (see `src/db/icons.ts`'s comment on
+ * why `sharp` stays a build-time-only tool). Silently no-ops on a missing
+ * file or a failed validation, matching this file's existing precedent of
+ * not wiring up error-display plumbing for settings forms.
+ */
+export async function updateBusinessLogoAction(formData: FormData) {
+  await requireSession();
+  const file = formData.get("logo");
+  if (!(file instanceof File) || file.size === 0) return;
+
+  const check = validateLogo(file.type, file.size);
+  if (!check.ok) return;
+
+  const data = Buffer.from(await file.arrayBuffer()).toString("base64");
+  await setBusinessLogo(data, file.type);
+  revalidatePath("/settings");
+}
+
+export async function removeBusinessLogoAction() {
+  await requireSession();
+  await setBusinessLogo(null, null);
+  revalidatePath("/settings");
+}
+
+/**
+ * Add a person to the business owner's roster.
+ *
+ * A contact list, not an account: no login, no payroll, no link to any
+ * transaction. It exists only so a business-mode household has somewhere to
+ * keep track of who it pays.
+ */
+export async function createPersonAction(formData: FormData) {
+  await requireSession();
+  const check = validatePerson({
+    name: String(formData.get("name") ?? ""),
+    type: String(formData.get("type") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!check.ok) return;
+
+  await db.insert(people).values({
+    name: check.name,
+    type: check.type,
+    email: check.email,
+    note: check.note,
+  });
+  revalidatePath("/settings");
+}
+
+export async function archivePersonAction(formData: FormData) {
+  await requireSession();
+  const id = String(formData.get("personId") ?? "");
+  if (!id) return;
+  await db.update(people).set({ archivedAt: new Date() }).where(eq(people.id, id));
+  revalidatePath("/settings");
+}
+
+/**
  * Switch the chart of accounts.
  *
  * Non-destructive: both taxonomies live in the table, so this re-points the
@@ -449,7 +512,7 @@ export async function restartOnboardingAction() {
 export async function completeOnboardingAction(formData: FormData) {
   await requireSession();
 
-  const { setLedgerMode, setHousehold, setEstimatedTaxRate, household } =
+  const { setLedgerMode, setHousehold, setEstimatedTaxRate, setBusinessLogo, household } =
     await import("@/lib/mode");
   const { markOnboarded } = await import("@/lib/onboarding");
 
@@ -461,6 +524,17 @@ export async function completeOnboardingAction(formData: FormData) {
 
     const rate = Number(formData.get("rate"));
     if (Number.isFinite(rate)) await setEstimatedTaxRate(rate);
+
+    // Optional, and never blocks the redirect below — this step's own copy
+    // says everything here can be left blank and set later in Settings.
+    const logo = formData.get("logo");
+    if (logo instanceof File && logo.size > 0) {
+      const check = validateLogo(logo.type, logo.size);
+      if (check.ok) {
+        const data = Buffer.from(await logo.arrayBuffer()).toString("base64");
+        await setBusinessLogo(data, logo.type);
+      }
+    }
   } else {
     await setLedgerMode("personal", null);
 
