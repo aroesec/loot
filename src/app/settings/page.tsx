@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/db";
-import { accounts, categories, merchantRules, plaidItems } from "@/db/schema";
+import { accounts, categories, merchantRules, plaidItems, people } from "@/db/schema";
 import { listMcpTokens } from "@/lib/mcp/tokens";
 import { desc, eq, sql, isNull } from "drizzle-orm";
 import { loadTheme, EDITABLE_TOKENS, THEME_PRESETS } from "@/lib/theme";
@@ -8,7 +8,7 @@ import { hasLlm, hasPlaid, hasSms, env } from "@/lib/env";
 import { PageHeader, Card } from "@/components/ui";
 import { PlaidLinkButton } from "@/components/plaid-link";
 import { PushToggle } from "@/components/push-toggle";
-import { ledgerMode, businessName, household } from "@/lib/mode";
+import { ledgerMode, businessName, household, businessLogo } from "@/lib/mode";
 import {
   saveThemeAction,
   applyPresetAction,
@@ -19,6 +19,10 @@ import {
   issueMcpTokenAction,
   revokeMcpTokenAction,
   logoutAction,
+  updateBusinessLogoAction,
+  removeBusinessLogoAction,
+  createPersonAction,
+  archivePersonAction,
 } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -30,13 +34,14 @@ export default async function SettingsPage({
 }) {
   await requireAuth();
   const params = await searchParams;
-  const [mode, bizName, home] = await Promise.all([
+  const [mode, bizName, home, logo] = await Promise.all([
     ledgerMode(),
     businessName(),
     household(),
+    businessLogo(),
   ]);
 
-  const [theme, accountRows, categoryRows, ruleStats, topRules, tokens, plaidRows] = await Promise.all([
+  const [theme, accountRows, categoryRows, ruleStats, topRules, tokens, plaidRows, personRows] = await Promise.all([
     loadTheme(),
     db.select().from(accounts).where(isNull(accounts.archivedAt)).orderBy(accounts.name),
     db
@@ -74,6 +79,7 @@ export default async function SettingsPage({
       })
       .from(plaidItems)
       .orderBy(plaidItems.createdAt),
+    db.select().from(people).where(isNull(people.archivedAt)).orderBy(people.name),
   ]);
 
   const parents = categoryRows.filter((c) => !c.parentId);
@@ -358,6 +364,110 @@ export default async function SettingsPage({
             </p>
           </form>
         </Card>
+
+        {mode === "business" ? (
+          <>
+            {/* --- Business logo ---------------------------------------- */}
+            <Card>
+              <h2 className="text-lg">Business logo</h2>
+              <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                Shown on business reports. Square, around 512px, works best —
+                it is shown exactly as uploaded, with no resizing.
+              </p>
+
+              {logo ? (
+                <div className="mt-3 flex items-center gap-3">
+                  <img
+                    src={`data:${logo.mimeType};base64,${logo.data}`}
+                    alt="Business logo"
+                    className="size-16 rounded border border-[var(--color-border)] object-contain"
+                  />
+                  <form action={removeBusinessLogoAction}>
+                    <button
+                      type="submit"
+                      className="text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-negative)]"
+                    >
+                      Remove
+                    </button>
+                  </form>
+                </div>
+              ) : null}
+
+              <form action={updateBusinessLogoAction} className="mt-4 space-y-3">
+                <input
+                  type="file"
+                  name="logo"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="field"
+                />
+                <button type="submit" className="btn">Save</button>
+                <p className="text-xs text-[var(--color-ink-muted)]">
+                  PNG, JPEG or WebP, up to 1MB.
+                </p>
+              </form>
+            </Card>
+
+            {/* --- Team ---------------------------------------------------- */}
+            <Card>
+              <h2 className="text-lg">Team</h2>
+              <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                A roster of who you pay, for your own reference. Not linked to
+                any transaction or report — add employees and contractors
+                here to keep track of them, nothing more.
+              </p>
+
+              {personRows.length > 0 ? (
+                <ul className="mt-3 divide-y divide-[var(--color-border)]">
+                  {personRows.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between py-2 text-sm">
+                      <span>
+                        {p.name}
+                        {p.email ? (
+                          <span className="ml-2 text-xs text-[var(--color-ink-faint)]">{p.email}</span>
+                        ) : null}
+                      </span>
+                      <span className="flex items-center gap-3">
+                        <span className="chip">{p.type}</span>
+                        <form action={archivePersonAction}>
+                          <input type="hidden" name="personId" value={p.id} />
+                          <button
+                            type="submit"
+                            className="text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-negative)]"
+                          >
+                            Archive
+                          </button>
+                        </form>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <form action={createPersonAction} className="mt-4 space-y-3">
+                <div>
+                  <label htmlFor="person-name" className="mb-1 block text-xs font-medium">Name</label>
+                  <input id="person-name" name="name" placeholder="Ada Lovelace" className="field" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="person-type" className="mb-1 block text-xs font-medium">Type</label>
+                    <select id="person-type" name="type" className="field">
+                      <option value="employee">Employee</option>
+                      <option value="contractor">Contractor</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="person-email" className="mb-1 block text-xs font-medium">
+                      Email <span className="text-[var(--color-ink-faint)]">(optional)</span>
+                    </label>
+                    <input id="person-email" name="email" placeholder="ada@example.com" className="field" />
+                  </div>
+                </div>
+                <button type="submit" className="btn">Add</button>
+              </form>
+            </Card>
+          </>
+        ) : null}
 
         {/* --- Connected banks ---------------------------------------- */}
         <Card>

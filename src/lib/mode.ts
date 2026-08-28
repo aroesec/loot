@@ -173,3 +173,40 @@ export async function setEstimatedTaxRate(rate: number): Promise<void> {
       set: { estimatedTaxRate: clamped, updatedAt: new Date() },
     });
 }
+
+export type BusinessLogo = { data: string; mimeType: string };
+
+export async function businessLogo(): Promise<BusinessLogo | null> {
+  const [row] = await db
+    .select({
+      data: settings.businessLogoData,
+      mimeType: settings.businessLogoMimeType,
+    })
+    .from(settings)
+    .where(eq(settings.id, "singleton"))
+    .limit(1);
+
+  if (!row?.data || !row?.mimeType) return null;
+  return { data: row.data, mimeType: row.mimeType };
+}
+
+export async function setBusinessLogo(
+  data: string | null,
+  mimeType: string | null,
+): Promise<void> {
+  await db
+    .insert(settings)
+    .values({
+      id: "singleton",
+      businessLogoData: data,
+      businessLogoMimeType: mimeType,
+    })
+    .onConflictDoUpdate({
+      target: settings.id,
+      set: {
+        businessLogoData: data,
+        businessLogoMimeType: mimeType,
+        updatedAt: new Date(),
+      },
+    });
+}

@@ -160,6 +160,13 @@ export const insightSeverity = pgEnum("insight_severity", [
   "warning",
 ]);
 
+/**
+ * A contact on the business owner's roster — not an app user. There is no
+ * login, no payroll processing, and no link to any transaction; this exists
+ * only so a business-mode household can keep a list of who it pays.
+ */
+export const personType = pgEnum("person_type", ["employee", "contractor"]);
+
 // ---------------------------------------------------------------------------
 // Accounts
 // ---------------------------------------------------------------------------
@@ -191,6 +198,23 @@ export const accounts = pgTable("accounts", {
   /** Balance minus holds, where the institution reports it. */
   availableCents: bigint("available_cents", { mode: "number" }),
   balanceUpdatedAt: timestamp("balance_updated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+});
+
+/**
+ * The business owner's roster, for business mode. A contact list, not a
+ * user table — no login, no payroll processing, and nothing here is
+ * referenced by a transaction. See `personType` above.
+ */
+export const people = pgTable("people", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  type: personType("type").notNull(),
+  email: text("email"),
+  note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -742,6 +766,15 @@ export const settings = pgTable("settings", {
   businessName: text("business_name"),
 
   /**
+   * The business's logo, stored as it was uploaded (base64) rather than as
+   * a file path — this app has no object storage, and a logo is small
+   * enough that a text column is simpler than standing one up. Nullable:
+   * most deployments never set one.
+   */
+  businessLogoData: text("business_logo_data"),
+  businessLogoMimeType: text("business_logo_mime_type"),
+
+  /**
    * Household size, used only to scale published benchmarks. A per-person
    * grocery figure means nothing without it, and defaulting to one person
    * silently tells a family of four that they overspend on everything.
@@ -897,3 +930,5 @@ export type Budget = typeof budgets.$inferSelect;
 export type Insight = typeof insights.$inferSelect;
 export type NewInsight = typeof insights.$inferInsert;
 export type Settings = typeof settings.$inferSelect;
+export type Person = typeof people.$inferSelect;
+export type NewPerson = typeof people.$inferInsert;
