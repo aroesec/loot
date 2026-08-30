@@ -11,15 +11,11 @@ sole proprietorship that has to answer to a tax return.
 Single user, one database, nothing leaving your deployment. No account to make,
 no subscription, no company between you and your own transactions.
 
-```
-Income          $9,140.22
-Spending        $8,712.55
-Net               $427.67
+![The monthly overview: income, spending, where it went, budgets and recurring charges](docs/screenshots/overview.png)
 
-Groceries       $1,204.11   ▇▇▇▇▇▇▇▇▇▇▇▇
-Mortgage        $4,500.00   ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
-Restaurants       $612.40   ▇▇▇▇▇▇
-```
+<sub>Every figure in these screenshots is from a synthetic household — see
+[`docs/screenshots`](docs/screenshots). No real statement data appears anywhere
+in this repository.</sub>
 
 ## Why it exists
 
@@ -61,6 +57,13 @@ care about which figure is wrong, and in which direction, is not.
 * Optional bank syncing through Plaid; optional push and SMS alerts
 * An MCP server: ask Claude what you spent, or log a purchase by voice
 * Export everything as CSV or JSON, whenever you want
+
+|  |  |
+|---|---|
+| [![Budgets](docs/screenshots/budgets.png)](docs/screenshots/budgets.png) | [![Transactions](docs/screenshots/transactions.png)](docs/screenshots/transactions.png) |
+| **Budgets**, here with groceries carrying $643.19 of unspent balance in from earlier months | **Transactions**, showing what classified each row, which account it came from, and what is a transfer |
+| [![Buffer and goals](docs/screenshots/buffer-goals.png)](docs/screenshots/buffer-goals.png) | [![The year](docs/screenshots/year.png)](docs/screenshots/year.png) |
+| **Buffer & goals** — net worth, and how long the money would last | **Year** — the whole thing at once |
 
 ### Business mode
 
