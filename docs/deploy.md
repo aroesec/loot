@@ -92,6 +92,24 @@ Note that `vercel env pull` returns `[SENSITIVE]` rather than the value for
 variables marked sensitive, so they cannot be round-tripped back out. Keep them
 in a password manager.
 
+### Only `main` deploys
+
+`vercel.json` disables automatic deployments for every branch except `main`.
+
+A preview deployment needs `DATABASE_URL` and `SESSION_SECRET` at build time —
+`next build` validates them for the statically analysed routes, which is also
+why the Dockerfile and CI pass placeholders. Those variables are scoped to
+production, so preview builds failed on every pull request, and a contributor
+working from a fork could never have them anyway. A check that cannot pass
+teaches people to ignore checks.
+
+The correctness gates live in GitHub Actions instead: typecheck, tests, the
+Docker build, and every migration applied to a clean database.
+
+If you want working previews, give the preview scope its own database — a Neon
+branch is the intended shape — and set `main` and your preview branches to
+`true`.
+
 ### Schema and code deploy separately
 
 `db:migrate` runs from your machine while code deploys separately, so a live
