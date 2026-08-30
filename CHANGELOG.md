@@ -6,6 +6,8 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
+## 0.3.0
+
 ### Added
 - Net worth on Buffer & goals, with how much of it is unknown stated alongside
   it. An account with no balance is counted as unknown rather than as zero, and
@@ -24,6 +26,9 @@ Notable changes, newest first. This project follows
   deducting what the vehicle actually cost rather than adding to it
 - Accounts and roster entries can be renamed and corrected after they are
   created
+- The split form arrives filled in the way you last split that merchant. It
+  suggests and never applies — the same shop is 70/30 one week and entirely
+  household the next, and the total cannot say which
 
 ### Fixed
 - **Security.** A theme value could break out of the `<style>` element it is
@@ -37,6 +42,9 @@ Notable changes, newest first. This project follows
 - The budgets header subtracted spending from the sum of the targets while the
   lines below used the carried figure, so the page disagreed with itself once
   anything rolled over
+- A mileage distance beyond what the column holds, and a date like `2026-13-45`
+  that is shaped right but is not a day, both reached Postgres and failed
+  there. Both are refused by the form now
 
 ### Changed
 - The JSON export carries the mileage log and the balance history
