@@ -6,6 +6,7 @@ import {
   categories,
   goals,
   merchantRules,
+  mileageTrips,
   people,
   recurringSeries,
   transactions,
@@ -51,6 +52,7 @@ export type ExportBundle = {
   goals: unknown[];
   recurringSeries: unknown[];
   people: unknown[];
+  mileageTrips: unknown[];
 };
 
 /**
@@ -119,7 +121,7 @@ export async function transactionsCsv(): Promise<string> {
 
 /** Everything the person created, in a shape another deployment can read. */
 export async function exportBundle(): Promise<ExportBundle> {
-  const [acct, cats, txns, rules, budg, gls, series, ppl] = await Promise.all([
+  const [acct, cats, txns, rules, budg, gls, series, ppl, miles] = await Promise.all([
     db.select().from(accounts),
     db.select().from(categories),
     db.select().from(transactions).orderBy(asc(transactions.postedOn)),
@@ -130,6 +132,7 @@ export async function exportBundle(): Promise<ExportBundle> {
     // Archived rows included: an export is a copy of the ledger, not a view of
     // it, and archiving is how this app retires a row without deleting it.
     db.select().from(people).orderBy(asc(people.name)),
+    db.select().from(mileageTrips).orderBy(asc(mileageTrips.droveOn)),
   ]);
 
   /*
@@ -150,9 +153,9 @@ export async function exportBundle(): Promise<ExportBundle> {
   return {
     exportedAt: new Date().toISOString(),
     application: "loot",
-    // 2 added `people`. Only ever grows by adding keys, so a reader written
-    // against 1 still finds everything it knew about.
-    formatVersion: 2,
+    // 2 added `people`, 3 `mileageTrips`. Only ever grows by adding keys, so a
+    // reader written against an older version still finds what it knew about.
+    formatVersion: 3,
     counts: {
       accounts: acct.length,
       categories: cats.length,
@@ -162,6 +165,7 @@ export async function exportBundle(): Promise<ExportBundle> {
       goals: gls.length,
       recurringSeries: series.length,
       people: ppl.length,
+      mileageTrips: miles.length,
     },
     accounts: plain(acct),
     categories: plain(cats),
@@ -171,5 +175,6 @@ export async function exportBundle(): Promise<ExportBundle> {
     goals: plain(gls),
     recurringSeries: plain(series),
     people: plain(ppl),
+    mileageTrips: plain(miles),
   };
 }

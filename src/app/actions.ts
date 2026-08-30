@@ -11,6 +11,7 @@ import {
   recurringSeries,
   accounts,
   people,
+  mileageTrips,
 } from "@/db/schema";
 import {
   createSession,
@@ -39,6 +40,7 @@ import { setLedgerMode, setHousehold, setBusinessLogo } from "@/lib/mode";
 import { validateLogo } from "@/lib/logo";
 import { validatePerson } from "@/lib/people-validate";
 import { isAccountKind, normalizeLast4 } from "@/lib/account-kinds";
+import { tenthsFromMiles } from "@/lib/mileage";
 
 async function requireSession() {
   if (!(await isAuthenticated())) redirect("/login");
@@ -441,6 +443,45 @@ export async function createPersonAction(formData: FormData) {
     note: check.note,
   });
   revalidatePath("/settings");
+}
+
+/**
+ * Log a business trip.
+ *
+ * The rate is not taken from the form and not stored: it follows from the date
+ * driven, so a trip logged today and the same trip logged next year still
+ * deduct at whatever the IRS published for the day it happened.
+ */
+export async function createMileageTripAction(formData: FormData) {
+  await requireSession();
+
+  const droveOn = String(formData.get("droveOn") ?? "").trim();
+  const purpose = String(formData.get("purpose") ?? "").trim();
+  const milesTenths = tenthsFromMiles(String(formData.get("miles") ?? ""));
+
+  // A date the database would reject, a distance that is not one, or a trip
+  // with no stated business purpose — the purpose is what makes it deductible.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(droveOn) || !purpose || milesTenths === null) return;
+
+  await db.insert(mileageTrips).values({
+    droveOn,
+    milesTenths,
+    purpose,
+    destination: String(formData.get("destination") ?? "").trim() || null,
+  });
+  revalidatePath("/mileage");
+  revalidatePath("/schedule-c");
+}
+
+export async function deleteMileageTripAction(formData: FormData) {
+  await requireSession();
+  const id = String(formData.get("tripId") ?? "");
+  if (!id) return;
+  // Deleted rather than archived: a trip logged by mistake is not history, and
+  // an inflated mileage log is a bad thing to keep on a tax record.
+  await db.delete(mileageTrips).where(eq(mileageTrips.id, id));
+  revalidatePath("/mileage");
+  revalidatePath("/schedule-c");
 }
 
 /** Correct a roster entry. Same validation as creating one. */

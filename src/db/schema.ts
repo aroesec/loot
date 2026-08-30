@@ -222,6 +222,36 @@ export const people = pgTable("people", {
 });
 
 /**
+ * A business mileage log.
+ *
+ * The one Schedule C figure no import can produce: the deduction comes from
+ * miles driven rather than money that moved, so it has to be recorded by hand.
+ * The IRS wants a date, the distance, where you went and why, which is exactly
+ * these columns.
+ *
+ * Miles are stored as tenths for the same reason money is stored as cents — a
+ * log records 12.4 miles, and a float would put a fraction of a cent into a
+ * number that goes on a tax return. The rate is deliberately *not* stored: it
+ * is a function of the date driven (see `lib/mileage.ts`), and duplicating it
+ * per row would let a typo diverge from the published schedule.
+ */
+export const mileageTrips = pgTable(
+  "mileage_trips",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    droveOn: date("drove_on").notNull(),
+    milesTenths: integer("miles_tenths").notNull(),
+    /** Required: the IRS asks for a business purpose, not just a distance. */
+    purpose: text("purpose").notNull(),
+    destination: text("destination"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("mileage_trips_drove_on_idx").on(t.droveOn)],
+);
+
+/**
  * A linked bank login. One Item covers every account behind a single set of
  * credentials, which is also how Plaid's free tier is counted — so the four
  * institutions here are four Items, not one per account.
@@ -932,3 +962,4 @@ export type NewInsight = typeof insights.$inferInsert;
 export type Settings = typeof settings.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
+export type MileageTrip = typeof mileageTrips.$inferSelect;

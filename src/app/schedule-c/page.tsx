@@ -2,6 +2,10 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth";
 import { ledgerMode, businessName, estimatedTaxRate } from "@/lib/mode";
 import { scheduleC, businessYears, type ScheduleCLine } from "@/lib/tax";
+import { db } from "@/db";
+import { mileageTrips } from "@/db/schema";
+import { and, gte, lt } from "drizzle-orm";
+import { milesFromTenths, totalDeduction } from "@/lib/mileage";
 import { setAside, nextQuarterDue, quarterDueDates } from "@/lib/tax-math";
 import { formatCents } from "@/lib/money";
 import { PageHeader, Card, EmptyState, Stat } from "@/components/ui";
@@ -70,11 +74,28 @@ export default async function ScheduleCPage({
   const years = await businessYears();
   const year = Number(params.year) || years[0] || new Date().getFullYear();
 
-  const [summary, name, rate] = await Promise.all([
+  const [summary, name, rate, trips] = await Promise.all([
     scheduleC(year),
     businessName(),
     estimatedTaxRate(),
+    /*
+     * A half-open range rather than a prefix match: `drove_on` is a real
+     * `date`, and Postgres has no `LIKE` for one ("operator does not exist:
+     * date ~~ unknown"). The range is what wants the index anyway, and unlike
+     * `date_trunc` it can actually use it.
+     */
+    db
+      .select({ milesTenths: mileageTrips.milesTenths, droveOn: mileageTrips.droveOn })
+      .from(mileageTrips)
+      .where(
+        and(
+          gte(mileageTrips.droveOn, `${year}-01-01`),
+          lt(mileageTrips.droveOn, `${year + 1}-01-01`),
+        ),
+      ),
   ]);
+
+  const mileage = totalDeduction(trips);
 
   const owed = setAside(summary.netProfitCents, year, rate);
   const today = new Date().toISOString().slice(0, 10);
@@ -111,6 +132,24 @@ export default async function ScheduleCPage({
         <Stat label="Deductible expenses" value={formatCents(summary.deductibleCents)} />
         <Stat label="Net profit" value={formatCents(summary.netProfitCents)} />
       </div>
+
+      {mileage.milesTenths > 0 ? (
+        <Card className="mb-4">
+          <h2 className="text-lg">Mileage — line 9</h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+            {milesFromTenths(mileage.milesTenths).toLocaleString("en-US")} business
+            miles in {year}, rated by the day each trip was driven.{" "}
+            <strong>{formatCents(mileage.deductionCents)}</strong>.
+          </p>
+          <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+            Deliberately not added to the figures above. The standard rate is an
+            alternative to deducting what the vehicle actually cost to run — if
+            you claim these miles, the fuel and maintenance already counted as
+            expenses are not also deductible, and adding the two would overstate
+            the deduction.
+          </p>
+        </Card>
+      ) : null}
 
       <Card className="mb-4">
         <h2 className="text-lg">Income</h2>

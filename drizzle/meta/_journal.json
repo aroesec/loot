@@ -113,6 +113,13 @@
       "when": 1787955479640,
       "tag": "0015_fuzzy_lord_tyger",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788112661682,
+      "tag": "0016_supreme_tinkerer",
+      "breakpoints": true
     }
   ]
 }

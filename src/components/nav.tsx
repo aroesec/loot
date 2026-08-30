@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/cards", label: "Card payments" },
   { href: "/pl", label: "Profit & Loss", mode: "business" },
   { href: "/schedule-c", label: "Schedule C", mode: "business" },
+  { href: "/mileage", label: "Mileage", mode: "business" },
   { href: "/budgets", label: "Budgets", mode: "personal" },
   { href: "/recurring", label: "Recurring" },
   { href: "/review", label: "Review" },
