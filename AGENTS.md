@@ -42,6 +42,9 @@ Break one of these and a number goes wrong without anything erroring.
 | Category slugs are globally unique across both charts of accounts | The second seed silently overwrites the first |
 | Owner's draw is not an expense | Understates profit and overstates deductions on a tax return |
 | A split's parts sum exactly to what they replaced | Nothing downstream re-checks it, so a month's total moves silently |
+| An account with no balance is **unknown**, never zero | Net worth reads as healthy while missing an entire mortgage |
+| A carried budget balance is consumed by overspending, not only grown by underspending | A pot that only grows says you can afford what you cannot |
+| Mileage is rated by the date driven, never by the year | The IRS revises mid-year, so a year at one rate is wrong for half of it |
 
 `pnpm db:audit-income` and `pnpm db:audit-period [YYYY-MM]` exist to check the
 first four from the outside. Run them after touching classification.

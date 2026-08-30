@@ -341,6 +341,90 @@ mean something when comparing against household averages, and a business
 deployment was being asked "How many people are in your household?" above its
 P&L on every page.
 
+## Mileage (`src/lib/mileage.ts`, `/mileage`)
+
+The one Schedule C figure no import can produce. Every other number here is
+derived from transactions, which are complete by construction — a statement
+either was imported or was not. A deduction for driving comes from miles, not
+from money that moved, so nothing parses it out of anything. The `vehicle`
+category's hint had been saying "mileage records matter" while the app offered
+nowhere to keep them.
+
+**Rates are effective-dated periods, looked up by the date driven.** The IRS
+revises mid-year: 2026 ran at 72.5¢ through June and 76¢ from July, and 2022
+did the same. A rate looked up by year is not imprecise, it is wrong for half
+of every year that happens. A year's total is therefore summed per trip rather
+than multiplied once — 200 miles either side of the 2026 change is $148.50,
+where a single rate gives $145.00 or $152.00.
+
+Unpublished years carry the newest rate and report `exact: false`, the bargain
+`wageBase` already makes: a carried figure said to be carried, rather than a
+guess presented with the confidence of a published one.
+
+**Shown on Schedule C, deliberately not added to the deductible total.** The
+standard rate replaces deducting what the vehicle actually cost; it does not
+add to it. The fuel is already in the ledger as transactions and the miles are
+in a separate list, neither knows about the other, and summing them would
+overstate a deduction with nothing positioned to catch it.
+
+Miles are stored as tenths for the reason money is stored as cents. The rate is
+not stored at all — it follows from the date, and a copy per row could drift
+from the schedule.
+
+## Budget rollover (`src/lib/budget-rollover.ts`)
+
+A calendar month is an accounting artifact. Real costs are lumpy, and a budget
+that resets on the 1st scores three deliberate months of underspending as three
+wins and then a failure.
+
+**The carried balance is consumed by overspending in every mode that carries
+anything.** Accumulating underspend while ignoring overspend produces a pot
+that only grows — a number telling someone they can afford what they cannot,
+which is this codebase's defining failure. `under` differs from `both` only in
+refusing to let the balance fall below zero; it does not refuse to spend it.
+
+Off by default and set per budget, because this changes a figure people already
+act on. Turning it on is not retroactive either: saving a budget writes a new
+effective-dated version and the window starts there, so the switch never makes
+a number jump on the way in, and switching it off restores the previous figures
+exactly.
+
+The summary header once subtracted spending from the sum of the bare targets
+while the lines below used the carried figure, so the page disagreed with
+itself the moment anything rolled over. `budgetStatus` returns the available
+and carried totals for that reason — the same reason all of this math lives in
+`ledger.ts` rather than in the pages.
+
+## Net worth (`src/lib/net-worth.ts`)
+
+Everything else here is a flow. A balance is a stock, and the only things that
+produce one are a linked bank or someone typing it in.
+
+**An account with no balance is unknown, never zero.** This is the whole
+feature. A linked current account beside an unlinked mortgage, with the
+mortgage counted as zero, reads as a healthy net worth that is wrong by the
+size of a house and looks entirely ordinary. So coverage is reported next to
+the figure, by the same tested function that computes it, so the wording cannot
+drift from the arithmetic.
+
+Balances can be typed in, or this belongs only to people who link a bank —
+which is not how most people run this. Blank stays unknown rather than becoming
+zero, and the balance timestamp is only restamped when the figure moves, so
+saving a rename cannot make last week's synced balance look confirmed today.
+
+Investments count here where `buffer.ts` excludes them. Same balances,
+different question: a buffer asks what could be spent this month without
+selling anything, net worth asks what is owned. Liabilities take the absolute
+value, because a card balance arrives signed either way by institution and a
+flip moves debt onto the asset side — wrong by twice the balance rather than by
+a little.
+
+`account_balances` keeps one row per account per day, written from both the
+sync and the manual path, upserted so four syncs in a day leave one figure.
+Nothing backfills: Plaid does not hand history back, so a deployment has no
+line until it has been running. That is also why the table ships in the
+export — the history is unreconstructable once lost.
+
 ## Ledger (`src/lib/ledger.ts`)
 
 All month/year/budget math lives here so no two pages can disagree.
