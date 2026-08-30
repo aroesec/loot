@@ -59,8 +59,14 @@ the suite readable a year later.
 
 Pure logic belongs in a module that does not import `@/db`. Importing the
 database pulls in the whole env schema and puts the code out of reach of a unit
-test. `classify/match.ts`, `dates.ts` and `reconcile/coverage.ts` were all split
-out for that reason.
+test. `classify/match.ts`, `dates.ts` and `reconcile/coverage.ts` were the first
+split out for that reason; [TESTING.md](TESTING.md) lists the rest.
+
+It is also what lets a client component share a constant with the server
+instead of repeating it, and it is how the theme sanitiser got a test at all —
+the function that writes theme values into the page was stranded behind a
+database import, so the one piece of string-building that reaches HTML was the
+one piece nothing covered.
 
 ## Changing the taxonomy
 

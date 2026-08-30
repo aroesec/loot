@@ -40,9 +40,18 @@ export async function verifyAgainstHash(
 
   const salt = Buffer.from(parts[1]!, "base64url");
   const expected = Buffer.from(parts[2]!, "base64url");
-  const derived = (await scryptAsync(plaintext, salt, expected.length)) as Buffer;
 
-  return derived.length === expected.length && timingSafeEqual(derived, expected);
+  /*
+   * The digest has to be the length `hashPassword` produces. Deriving to
+   * `expected.length` instead would take its instructions from the stored
+   * value: a hash truncated by a bad copy-paste or a clipped environment
+   * variable would then be checked against a correspondingly shorter key and
+   * still return true, silently weakening the login rather than failing it.
+   */
+  if (expected.length !== KEY_LENGTH || salt.length !== SALT_BYTES) return false;
+
+  const derived = (await scryptAsync(plaintext, salt, KEY_LENGTH)) as Buffer;
+  return timingSafeEqual(derived, expected);
 }
 
 /**
