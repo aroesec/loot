@@ -9,6 +9,8 @@ import { PageHeader, Card } from "@/components/ui";
 import { PlaidLinkButton } from "@/components/plaid-link";
 import { PushToggle } from "@/components/push-toggle";
 import { ledgerMode, businessName, household, businessLogo } from "@/lib/mode";
+import { PERSON_TYPES } from "@/lib/people-validate";
+import { LOGO_ALLOWED_MIME_TYPES, LOGO_MAX_BYTES } from "@/lib/logo";
 import {
   saveThemeAction,
   applyPresetAction,
@@ -394,15 +396,20 @@ export default async function SettingsPage({
               ) : null}
 
               <form action={updateBusinessLogoAction} className="mt-4 space-y-3">
+                {/*
+                  `accept` and the limit below both come from the same
+                  constants the server validates against, so the picker cannot
+                  offer a file the upload will silently drop.
+                */}
                 <input
                   type="file"
                   name="logo"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept={LOGO_ALLOWED_MIME_TYPES.join(",")}
                   className="field"
                 />
                 <button type="submit" className="btn">Save</button>
                 <p className="text-xs text-[var(--color-ink-muted)]">
-                  PNG, JPEG or WebP, up to 1MB.
+                  PNG, JPEG or WebP, up to {LOGO_MAX_BYTES / 1024 / 1024}MB.
                 </p>
               </form>
             </Card>
@@ -451,9 +458,18 @@ export default async function SettingsPage({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="person-type" className="mb-1 block text-xs font-medium">Type</label>
+                    {/*
+                      Driven by PERSON_TYPES, which is also what the action
+                      validates against — a hand-written list here would let
+                      the two drift, and the one that loses is the option the
+                      form offers but the server rejects.
+                    */}
                     <select id="person-type" name="type" className="field">
-                      <option value="employee">Employee</option>
-                      <option value="contractor">Contractor</option>
+                      {PERSON_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>

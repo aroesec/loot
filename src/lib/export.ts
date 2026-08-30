@@ -6,6 +6,7 @@ import {
   categories,
   goals,
   merchantRules,
+  people,
   recurringSeries,
   transactions,
 } from "@/db/schema";
@@ -29,6 +30,12 @@ import { toCsv } from "./export-csv";
  * elsewhere), push subscriptions (bound to a browser install), MCP token hashes,
  * and notification history. None of it is the person's *ledger*, and the first
  * three are things an export should never hand out.
+ *
+ * The test for inclusion is whether the person typed it. A hand-built roster
+ * of who the business pays exists nowhere else and would be retyped from
+ * memory if it were left out, so it ships with the rest — the same reason the
+ * categories and corrections do. Settings are not here: a theme and a tax rate
+ * are configuration for this deployment, not a record the person authored.
  */
 
 export type ExportBundle = {
@@ -43,6 +50,7 @@ export type ExportBundle = {
   budgets: unknown[];
   goals: unknown[];
   recurringSeries: unknown[];
+  people: unknown[];
 };
 
 /**
@@ -111,7 +119,7 @@ export async function transactionsCsv(): Promise<string> {
 
 /** Everything the person created, in a shape another deployment can read. */
 export async function exportBundle(): Promise<ExportBundle> {
-  const [acct, cats, txns, rules, budg, gls, series] = await Promise.all([
+  const [acct, cats, txns, rules, budg, gls, series, ppl] = await Promise.all([
     db.select().from(accounts),
     db.select().from(categories),
     db.select().from(transactions).orderBy(asc(transactions.postedOn)),
@@ -119,6 +127,9 @@ export async function exportBundle(): Promise<ExportBundle> {
     db.select().from(budgets),
     db.select().from(goals),
     db.select().from(recurringSeries),
+    // Archived rows included: an export is a copy of the ledger, not a view of
+    // it, and archiving is how this app retires a row without deleting it.
+    db.select().from(people).orderBy(asc(people.name)),
   ]);
 
   /*
@@ -139,7 +150,9 @@ export async function exportBundle(): Promise<ExportBundle> {
   return {
     exportedAt: new Date().toISOString(),
     application: "loot",
-    formatVersion: 1,
+    // 2 added `people`. Only ever grows by adding keys, so a reader written
+    // against 1 still finds everything it knew about.
+    formatVersion: 2,
     counts: {
       accounts: acct.length,
       categories: cats.length,
@@ -148,6 +161,7 @@ export async function exportBundle(): Promise<ExportBundle> {
       budgets: budg.length,
       goals: gls.length,
       recurringSeries: series.length,
+      people: ppl.length,
     },
     accounts: plain(acct),
     categories: plain(cats),
@@ -156,5 +170,6 @@ export async function exportBundle(): Promise<ExportBundle> {
     budgets: plain(budg),
     goals: plain(gls),
     recurringSeries: plain(series),
+    people: plain(ppl),
   };
 }

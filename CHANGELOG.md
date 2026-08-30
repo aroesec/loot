@@ -6,6 +6,23 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
+### Added
+- Business logo, set during first run or from Settings, shown on business
+  reports. PNG, JPEG or WebP up to 1MB
+- A team roster for business mode: employees and contractors, with name, type
+  and an optional email. It is a contact list for your own reference — nothing
+  in it is linked to a transaction or a report
+- Linking a bank is now offered during first run, not only afterwards in
+  Settings
+
+### Changed
+- First-run setup asks personal-or-business as a choice you can switch at any
+  point rather than a step you commit to. The fields below it change as you
+  switch, so the other option is no longer behind a click
+- The JSON export now carries the team roster (`formatVersion` 2). The format
+  only ever grows by adding keys, so anything reading version 1 still finds
+  what it knew about
+
 ## 0.1.1
 
 - Correct the registry tag in the docs: the git tag `v0.1.0` publishes as
