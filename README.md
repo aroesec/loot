@@ -125,7 +125,7 @@ docker pull ghcr.io/aroesec/loot:latest
 docker compose up -d
 ```
 
-Pin to `0.2.0` or a `sha-` tag for anything you care about. `latest` moves, and
+Pin to `0.3.0` or a `sha-` tag for anything you care about. `latest` moves, and
 registry tags carry no `v` prefix even though the git tags do.
 
 ## Documentation
