@@ -1,10 +1,15 @@
 # Loot
 
+[![Release](https://img.shields.io/github/v/release/aroesec/loot?sort=semver)](https://github.com/aroesec/loot/releases)
+[![CI](https://github.com/aroesec/loot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aroesec/loot/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/aroesec/loot)](LICENSE)
+
 A finance ledger you host yourself. Upload bank and card statements, or connect
 an account, and it works out where the money went — for a household, or for a
 sole proprietorship that has to answer to a tax return.
 
-Single user, one database, nothing leaving your deployment.
+Single user, one database, nothing leaving your deployment. No account to make,
+no subscription, no company between you and your own transactions.
 
 ```
 Income          $9,140.22
@@ -15,6 +20,25 @@ Groceries       $1,204.11   ▇▇▇▇▇▇▇▇▇▇▇▇
 Mortgage        $4,500.00   ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
 Restaurants       $612.40   ▇▇▇▇▇▇
 ```
+
+## Why it exists
+
+Most of this code is not about showing you a number. It is about the number
+being right when nothing looks wrong.
+
+A ledger fails quietly. It does not crash — it reports $5,000 of spending in a
+month that really cost $16,600, because two payment rails were flagged as
+transfers and $6,000 paid to a contractor stopped counting. It tells a family of
+four they overspend on everything, because nobody asked how many people live
+there. It files a $1,430 card payment as fuel because the pattern `mobil` also
+sits inside `MOBILE PMT`.
+
+Every one of those happened here, and each one is now an invariant with a test
+and a paragraph in [DESIGN.md](DESIGN.md) naming the bug that produced it. That
+is the actual design of this project: owner's draw is not an expense, an account
+with no balance is unknown rather than zero, mileage is rated by the day it was
+driven because the IRS revises the rate mid-year. The features are ordinary. The
+care about which figure is wrong, and in which direction, is not.
 
 ## Features
 
@@ -68,9 +92,42 @@ Set aside       $7,591.00   $3,102 self-employment + $4,489 income tax
 * Your business name and logo on reports, and a roster of the employees and
   contractors you pay
 
+## Choosing this, or not
+
+There is good self-hosted finance software already —
+[Actual Budget](https://actualbudget.org) and
+[Firefly III](https://www.firefly-iii.org) are both mature, and if envelope
+budgeting or a long-established tool is what you want, start there.
+
+What this one leans on:
+
+- **Statements in, answers out.** Point it at a CSV — or a PDF, or a photo of
+  one — and it classifies what it finds, learns from your corrections, and asks
+  rather than guesses when it cannot tell.
+- **A business mode that reaches a tax form.** Profit and loss, Schedule C by
+  line, self-employment tax, quarterly dates, a mileage log.
+- **It talks to Claude.** An MCP server, so you can ask what you spent and log a
+  purchase out loud.
+- **It is genuinely one household.** Not multi-tenant software running for one
+  person — there is no tenant, no account, and nothing to send anywhere.
+
+What it is not: a shared budget for a couple, a mobile app, or a service. It is
+one deployment, one password, and your own Postgres.
+
 ## Setup
 
-Node 22 or newer, pnpm, and a Postgres database.
+Just want it running? Docker Compose brings up the app and a Postgres beside it:
+
+```sh
+git clone https://github.com/aroesec/loot.git
+cd loot
+cp .env.example .env      # then set the values docs/deploy.md lists
+docker compose up -d
+```
+
+[docs/deploy.md](docs/deploy.md) covers the rest, including the migrations. To
+work on it instead of just running it, you need Node 22 or newer, pnpm, and a
+Postgres database.
 
 ```sh
 git clone https://github.com/aroesec/loot.git
@@ -121,12 +178,13 @@ A prebuilt image is published to GitHub Container Registry on every push to
 `main` and every release tag:
 
 ```sh
-docker pull ghcr.io/aroesec/loot:latest
-docker compose up -d
+docker pull ghcr.io/aroesec/loot:0.3.0
 ```
 
-Pin to `0.3.0` or a `sha-` tag for anything you care about. `latest` moves, and
-registry tags carry no `v` prefix even though the git tags do.
+Note that `docker-compose.yml` builds from source rather than using it, so the
+image is for your own compose file or orchestrator. Pin to `0.3.0` or a `sha-`
+tag for anything you care about: `latest` moves, and registry tags carry no `v`
+prefix even though the git tags do.
 
 ## Documentation
 
@@ -143,6 +201,7 @@ registry tags carry no `v` prefix even though the git tags do.
 | [AGENTS.md](AGENTS.md) | Conventions and invariants, for humans and coding agents |
 | [DESIGN.md](DESIGN.md) | Why the design is the way it is |
 | [TESTING.md](TESTING.md) | What is worth testing here, and what is not |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each release |
 
 ## Commands
 

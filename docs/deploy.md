@@ -10,7 +10,7 @@ server.
 App plus Postgres, nothing else required.
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/loot && cd loot
+git clone https://github.com/aroesec/loot && cd loot
 cp .env.example .env
 ```
 
