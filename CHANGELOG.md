@@ -6,6 +6,8 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
+## 0.2.0
+
 ### Added
 - Business logo, set during first run or from Settings, shown on business
   reports. PNG, JPEG or WebP up to 1MB
@@ -22,6 +24,11 @@ Notable changes, newest first. This project follows
 - The JSON export now carries the team roster (`formatVersion` 2). The format
   only ever grows by adding keys, so anything reading version 1 still finds
   what it knew about
+- Only `main` deploys to Vercel now. A preview build needs `DATABASE_URL` and
+  `SESSION_SECRET`, which are production-scoped and cannot be given to a fork,
+  so the preview check had failed on every pull request this repo has had.
+  `docs/deploy.md` explains how to turn previews back on with their own
+  database
 
 ## 0.1.1
 
