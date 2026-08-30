@@ -1,3 +1,4 @@
+import { rowsOf } from "@/lib/db-rows";
 import { execFile } from "node:child_process";
 import { createWriteStream, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -57,19 +58,6 @@ function scrubError(err: unknown): string {
   return raw
     .replace(/postgres(ql)?:\/\/[^\s"']+/g, "postgresql://[redacted]")
     .replace(/(password=)[^\s&"']+/gi, "$1[redacted]");
-}
-
-/**
- * Read result rows regardless of driver shape.
- *
- * postgres.js returns an array-like RowList while node-postgres returns
- * `{ rows }`. Reading the wrong one yields `undefined` rather than an error,
- * which silently disabled the version check below and let pg_dump produce its
- * own opaque failure instead.
- */
-function rowsOf<T>(result: unknown): T[] {
-  const maybe = (result as { rows?: unknown }).rows;
-  return (Array.isArray(maybe) ? maybe : (result as T[])) ?? [];
 }
 
 /**

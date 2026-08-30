@@ -21,15 +21,32 @@ export function SplitForm({
   amountCents,
   categoryId,
   categories,
+  suggestion,
 }: {
   transactionId: string;
   amountCents: number;
   categoryId: string | null;
   categories: Category[];
+  /** How this merchant was split last time, already applied to this amount. */
+  suggestion?: { categoryId: string; amountCents: number }[] | null;
 }) {
   const dollars = (cents: number) => (cents / 100).toFixed(2);
 
   const [parts, setParts] = useState<Part[]>(() => {
+    /*
+     * Filled in from the last split of this merchant when there is one. The
+     * suggestion is never applied on its own — the tedium worth removing is
+     * re-typing the same two categories every week, not the deciding, and the
+     * same shop is 70/30 one week and entirely household the next.
+     */
+    if (suggestion?.length) {
+      // Signed to match the transaction: the amounts arrive as magnitudes.
+      const sign = amountCents < 0 ? -1 : 1;
+      return suggestion.map((p) => ({
+        amount: dollars(p.amountCents * sign),
+        categoryId: p.categoryId,
+      }));
+    }
     const halves = divideEvenly(amountCents, 2);
     return halves.map((c) => ({ amount: dollars(c), categoryId: categoryId ?? categories[0]?.id ?? "" }));
   });
@@ -75,6 +92,13 @@ export function SplitForm({
       <p className="text-xs text-[var(--color-ink-muted)]">
         Splitting {formatCents(amountCents)}. The parts have to add up to it
         exactly.
+        {suggestion?.length ? (
+          <>
+            {" "}
+            Filled in the way you last split this merchant — change anything
+            that is different this time.
+          </>
+        ) : null}
       </p>
 
       {parts.map((p, i) => (

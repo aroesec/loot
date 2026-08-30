@@ -40,9 +40,12 @@ const SOURCE_LABEL: Record<Txn["source"], string> = {
 export function TransactionRow({
   txn,
   categories,
+  splitSuggestion,
 }: {
   txn: Txn;
   categories: Array<{ id: string; name: string; slug: string }>;
+  /** How this merchant was split last time, already sized to this amount. */
+  splitSuggestion?: { categoryId: string; amountCents: number }[] | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -178,6 +181,7 @@ export function TransactionRow({
                 amountCents={txn.amountCents}
                 categoryId={txn.categoryId}
                 categories={categories}
+                suggestion={splitSuggestion}
               />
             </details>
           )}

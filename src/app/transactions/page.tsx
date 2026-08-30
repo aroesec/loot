@@ -5,6 +5,7 @@ import { transactions, categories, accounts } from "@/db/schema";
 import { and, desc, eq, ne, sql, or, ilike, gte, lte, type SQL } from "drizzle-orm";
 import { PageHeader, Card, EmptyState } from "@/components/ui";
 import { TransactionRow } from "@/components/transaction-row";
+import { priorSplitsByMerchant, suggestionFor } from "@/lib/split-history";
 import { REVIEW_THRESHOLD } from "@/lib/classify";
 import { reclassifyPendingAction, reapplyRulesAction } from "../actions";
 import { formatCents } from "@/lib/money";
@@ -103,6 +104,9 @@ export default async function TransactionsPage({
   const parentIds = new Set(
     categoryOptions.map((c) => c.parentId).filter((v): v is string => Boolean(v)),
   );
+  // One lookup for the page, not one per row.
+  const priorSplits = await priorSplitsByMerchant(rows.map((r) => r.merchant));
+
   const assignable = categoryOptions.filter((c) => !parentIds.has(c.id));
 
   const total = Number(countRows[0]?.count ?? 0);
@@ -236,7 +240,12 @@ export default async function TransactionsPage({
         <Card className="!p-0">
           <ul className="divide-y divide-[var(--color-border)]">
             {rows.map((t) => (
-              <TransactionRow key={t.id} txn={t} categories={assignable} />
+              <TransactionRow
+                key={t.id}
+                txn={t}
+                categories={assignable}
+                splitSuggestion={suggestionFor(priorSplits, t.merchant, t.amountCents)}
+              />
             ))}
           </ul>
         </Card>
