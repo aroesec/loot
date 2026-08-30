@@ -37,6 +37,7 @@ import { currentMonth } from "@/lib/ledger";
 import { setLedgerMode, setHousehold, setBusinessLogo } from "@/lib/mode";
 import { validateLogo } from "@/lib/logo";
 import { validatePerson } from "@/lib/people-validate";
+import { isAccountKind, normalizeLast4 } from "@/lib/account-kinds";
 
 async function requireSession() {
   if (!(await isAuthenticated())) redirect("/login");
@@ -342,22 +343,45 @@ export async function applyPresetAction(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+/** Account fields shared by create and update, validated the same way in both. */
+function accountFields(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return null;
+
+  const rawKind = String(formData.get("kind") ?? "checking");
+  return {
+    name,
+    // Checked rather than cast: the select is rendered from ACCOUNT_KINDS, but
+    // a form post is not obliged to have come from the select.
+    kind: isAccountKind(rawKind) ? rawKind : "checking",
+    institution: String(formData.get("institution") ?? "").trim() || null,
+    last4: normalizeLast4(String(formData.get("last4") ?? "")),
+  };
+}
+
 export async function createAccountAction(formData: FormData) {
   await requireSession();
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return;
-  await db.insert(accounts).values({
-    name,
-    kind: (String(formData.get("kind") ?? "checking") as
-      | "checking"
-      | "savings"
-      | "credit_card"
-      | "investment"
-      | "loan"
-      | "cash"),
-    institution: String(formData.get("institution") ?? "").trim() || null,
-    last4: String(formData.get("last4") ?? "").trim() || null,
-  });
+  const fields = accountFields(formData);
+  if (!fields) return;
+  await db.insert(accounts).values(fields);
+  revalidatePath("/settings");
+  revalidatePath("/upload");
+}
+
+/**
+ * Rename an account, or correct its type, institution or last four.
+ *
+ * Safe to do at any time: `dedupe_hash` is built from the account's **id**,
+ * not its name, so renaming cannot make a re-uploaded statement insert
+ * duplicates. Nothing else keys off the display name either.
+ */
+export async function updateAccountAction(formData: FormData) {
+  await requireSession();
+  const id = String(formData.get("accountId") ?? "");
+  const fields = accountFields(formData);
+  if (!id || !fields) return;
+
+  await db.update(accounts).set(fields).where(eq(accounts.id, id));
   revalidatePath("/settings");
   revalidatePath("/upload");
 }
@@ -411,6 +435,32 @@ export async function createPersonAction(formData: FormData) {
     email: check.email,
     note: check.note,
   });
+  revalidatePath("/settings");
+}
+
+/** Correct a roster entry. Same validation as creating one. */
+export async function updatePersonAction(formData: FormData) {
+  await requireSession();
+  const id = String(formData.get("personId") ?? "");
+  if (!id) return;
+
+  const check = validatePerson({
+    name: String(formData.get("name") ?? ""),
+    type: String(formData.get("type") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    note: String(formData.get("note") ?? ""),
+  });
+  if (!check.ok) return;
+
+  await db
+    .update(people)
+    .set({
+      name: check.name,
+      type: check.type,
+      email: check.email,
+      note: check.note,
+    })
+    .where(eq(people.id, id));
   revalidatePath("/settings");
 }
 

@@ -11,10 +11,12 @@ import { PushToggle } from "@/components/push-toggle";
 import { ledgerMode, businessName, household, businessLogo } from "@/lib/mode";
 import { PERSON_TYPES } from "@/lib/people-validate";
 import { LOGO_ALLOWED_MIME_TYPES, LOGO_MAX_BYTES } from "@/lib/logo";
+import { ACCOUNT_KINDS } from "@/lib/account-kinds";
 import {
   saveThemeAction,
   applyPresetAction,
   createAccountAction,
+  updateAccountAction,
   setLedgerModeAction,
   setHouseholdAction,
   createCategoryAction,
@@ -24,6 +26,7 @@ import {
   updateBusinessLogoAction,
   removeBusinessLogoAction,
   createPersonAction,
+  updatePersonAction,
   archivePersonAction,
 } from "../actions";
 
@@ -426,25 +429,63 @@ export default async function SettingsPage({
               {personRows.length > 0 ? (
                 <ul className="mt-3 divide-y divide-[var(--color-border)]">
                   {personRows.map((p) => (
-                    <li key={p.id} className="flex items-center justify-between py-2 text-sm">
-                      <span>
-                        {p.name}
-                        {p.email ? (
-                          <span className="ml-2 text-xs text-[var(--color-ink-faint)]">{p.email}</span>
-                        ) : null}
-                      </span>
-                      <span className="flex items-center gap-3">
-                        <span className="chip">{p.type}</span>
-                        <form action={archivePersonAction}>
+                    <li key={p.id} className="py-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span>
+                          {p.name}
+                          {p.email ? (
+                            <span className="ml-2 text-xs text-[var(--color-ink-faint)]">{p.email}</span>
+                          ) : null}
+                        </span>
+                        <span className="flex items-center gap-3">
+                          <span className="chip">{p.type}</span>
+                          <form action={archivePersonAction}>
+                            <input type="hidden" name="personId" value={p.id} />
+                            <button
+                              type="submit"
+                              className="text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-negative)]"
+                            >
+                              Archive
+                            </button>
+                          </form>
+                        </span>
+                      </div>
+
+                      {/*
+                        Disclosure rather than a toggle, so the row stays a
+                        server component — same pattern as the split form on a
+                        transaction.
+                      */}
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-ink)]">
+                          Edit
+                        </summary>
+                        <form action={updatePersonAction} className="mt-2 space-y-2">
                           <input type="hidden" name="personId" value={p.id} />
-                          <button
-                            type="submit"
-                            className="text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-negative)]"
-                          >
-                            Archive
-                          </button>
+                          <input
+                            name="name" defaultValue={p.name} aria-label="Name"
+                            className="field"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <select name="type" defaultValue={p.type} aria-label="Type" className="field">
+                              {PERSON_TYPES.map((t) => (
+                                <option key={t} value={t}>
+                                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              name="email" defaultValue={p.email ?? ""} placeholder="Email"
+                              aria-label="Email" className="field"
+                            />
+                          </div>
+                          <input
+                            name="note" defaultValue={p.note ?? ""} placeholder="Note"
+                            aria-label="Note" className="field"
+                          />
+                          <button type="submit" className="btn">Save</button>
                         </form>
-                      </span>
+                      </details>
                     </li>
                   ))}
                 </ul>
@@ -515,12 +556,45 @@ export default async function SettingsPage({
           {accountRows.length > 0 ? (
             <ul className="mt-3 divide-y divide-[var(--color-border)]">
               {accountRows.map((a) => (
-                <li key={a.id} className="flex items-center justify-between py-2 text-sm">
-                  <span>{a.name}</span>
-                  <span className="chip">
-                    {a.kind.replace("_", " ")}
-                    {a.last4 ? ` ••${a.last4}` : ""}
-                  </span>
+                <li key={a.id} className="py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      {a.name}
+                      {a.institution ? (
+                        <span className="ml-2 text-xs text-[var(--color-ink-faint)]">{a.institution}</span>
+                      ) : null}
+                    </span>
+                    <span className="chip">
+                      {a.kind.replace("_", " ")}
+                      {a.last4 ? ` ••${a.last4}` : ""}
+                    </span>
+                  </div>
+
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-[var(--color-ink-faint)] underline underline-offset-4 hover:text-[var(--color-ink)]">
+                      Edit
+                    </summary>
+                    <form action={updateAccountAction} className="mt-2 space-y-2">
+                      <input type="hidden" name="accountId" value={a.id} />
+                      <input name="name" defaultValue={a.name} aria-label="Name" className="field" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <select name="kind" defaultValue={a.kind} aria-label="Type" className="field">
+                          {ACCOUNT_KINDS.map((k) => (
+                            <option key={k.value} value={k.value}>{k.label}</option>
+                          ))}
+                        </select>
+                        <input
+                          name="last4" defaultValue={a.last4 ?? ""} placeholder="Last 4"
+                          maxLength={4} aria-label="Last 4" className="field"
+                        />
+                      </div>
+                      <input
+                        name="institution" defaultValue={a.institution ?? ""} placeholder="Institution"
+                        aria-label="Institution" className="field"
+                      />
+                      <button type="submit" className="btn">Save</button>
+                    </form>
+                  </details>
                 </li>
               ))}
             </ul>
@@ -535,12 +609,9 @@ export default async function SettingsPage({
               <div>
                 <label htmlFor="acct-kind" className="mb-1 block text-xs font-medium">Type</label>
                 <select id="acct-kind" name="kind" className="field">
-                  <option value="checking">Checking</option>
-                  <option value="savings">Savings</option>
-                  <option value="credit_card">Credit card</option>
-                  <option value="investment">Investment</option>
-                  <option value="loan">Loan</option>
-                  <option value="cash">Cash</option>
+                  {ACCOUNT_KINDS.map((k) => (
+                    <option key={k.value} value={k.value}>{k.label}</option>
+                  ))}
                 </select>
               </div>
               <div>
