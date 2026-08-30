@@ -29,7 +29,8 @@ Restaurants       $612.40   ▇▇▇▇▇▇
   measures how long your money would last
 * Compares categories against published national averages, adjusted for
   household size and region
-* Business mode, with a P&L, quarterly periods and Schedule C lines
+* Business mode, with a P&L, quarterly periods, Schedule C lines, your logo on
+  reports, and a roster of the people you pay
 * Alerts by web push or SMS, only when something is actually worth saying
 * An MCP server, so you can ask Claude what you spent and log purchases by
   voice

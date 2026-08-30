@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { STATE_PRICE_LEVEL } from "@/lib/benchmarks/regions";
 import { PlaidLinkButton } from "@/components/plaid-link";
+import { LOGO_ALLOWED_MIME_TYPES, LOGO_MAX_BYTES } from "@/lib/logo";
 
 // The states the benchmark data actually covers, so the picker cannot offer
 // one that would silently fall back to the national average.
@@ -209,11 +210,12 @@ function BusinessStep({ plaid }: { plaid: PlaidProps }) {
             Logo <span className="text-[var(--color-ink-faint)]">(optional)</span>
           </span>
           <input
-            type="file" name="logo" accept="image/png,image/jpeg,image/webp"
+            type="file" name="logo" accept={LOGO_ALLOWED_MIME_TYPES.join(",")}
             className="field mt-1"
           />
           <span className="mt-1 block text-xs text-[var(--color-ink-faint)]">
-            PNG, JPEG or WebP, up to 1MB. Add or change it later in Settings.
+            PNG, JPEG or WebP, up to {LOGO_MAX_BYTES / 1024 / 1024}MB. Add or
+            change it later in Settings.
           </span>
         </label>
 
@@ -239,12 +241,20 @@ function BusinessStep({ plaid }: { plaid: PlaidProps }) {
         </p>
       </div>
 
-      <div className="border-t border-[var(--color-border)] pt-4">
-        <h3 className="text-sm text-[var(--color-ink-muted)]">
-          Link a bank <span className="text-[var(--color-ink-faint)]">(optional)</span>
-        </h3>
-        <PlaidLinkButton {...plaid} />
-      </div>
+      {/*
+        Only when Plaid is actually configured. Unconfigured, this component
+        explains which environment variables to set — the right answer in
+        Settings, and noise in the middle of a first run, which is the path
+        most people arrive on with no Plaid credentials at all.
+      */}
+      {plaid.configured ? (
+        <div className="border-t border-[var(--color-border)] pt-4">
+          <h3 className="text-sm text-[var(--color-ink-muted)]">
+            Link a bank <span className="text-[var(--color-ink-faint)]">(optional)</span>
+          </h3>
+          <PlaidLinkButton {...plaid} />
+        </div>
+      ) : null}
 
       <p className="text-xs text-[var(--color-ink-faint)]">
         Add employees or contractors afterwards in{" "}
