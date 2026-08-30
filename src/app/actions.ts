@@ -394,7 +394,43 @@ export async function updateAccountAction(formData: FormData) {
   const fields = accountFields(formData);
   if (!id || !fields) return;
 
-  await db.update(accounts).set(fields).where(eq(accounts.id, id));
+  /*
+   * A balance is the one thing transactions cannot tell the ledger, so it can
+   * be typed in — otherwise net worth is only available to people who link a
+   * bank, which is not how most run this.
+   *
+   * Blank means unknown rather than zero. The field is rendered pre-filled, so
+   * an empty one is someone clearing it deliberately, and an account of
+   * unknown value has to stay distinguishable from an empty one.
+   */
+  const raw = String(formData.get("balance") ?? "").trim();
+  const balanceCents = raw === "" ? null : Math.round(Number(raw) * 100);
+  const balanceValid = raw === "" || Number.isFinite(balanceCents);
+
+  const [before] = await db
+    .select({ balanceCents: accounts.balanceCents })
+    .from(accounts)
+    .where(eq(accounts.id, id))
+    .limit(1);
+
+  const changed = balanceValid && (before?.balanceCents ?? null) !== balanceCents;
+
+  await db
+    .update(accounts)
+    .set({
+      ...fields,
+      ...(balanceValid ? { balanceCents } : {}),
+      // Only restamped when the figure actually moved. Saving a rename would
+      // otherwise make a balance Plaid set last week look like it was
+      // confirmed today.
+      ...(changed ? { balanceUpdatedAt: new Date() } : {}),
+    })
+    .where(eq(accounts.id, id));
+
+  if (changed && balanceCents !== null) {
+    const { recordBalance } = await import("@/lib/balance-history");
+    await recordBalance(id, balanceCents);
+  }
   revalidatePath("/settings");
   revalidatePath("/upload");
 }

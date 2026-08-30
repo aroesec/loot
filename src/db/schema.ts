@@ -215,6 +215,35 @@ export const accounts = pgTable("accounts", {
 });
 
 /**
+ * A balance, as it stood on a day.
+ *
+ * `accounts.balance_cents` is a single slot that every sync overwrites, so the
+ * ledger has always known what an account holds *now* and never what it held
+ * in March. Net worth is only interesting as a line, and a line needs history
+ * that nothing was keeping.
+ *
+ * One row per account per day, upserted: syncing four times in a day should
+ * leave the day with its latest figure, not four of them. Nothing backfills —
+ * a deployment that starts recording today has no line until tomorrow, which
+ * is honest and is why the page says so.
+ */
+export const accountBalances = pgTable(
+  "account_balances",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    capturedOn: date("captured_on").notNull(),
+    balanceCents: bigint("balance_cents", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("account_balances_day_key").on(t.accountId, t.capturedOn)],
+);
+
+/**
  * The business owner's roster, for business mode. A contact list, not a
  * user table — no login, no payroll processing, and nothing here is
  * referenced by a transaction. See `personType` above.

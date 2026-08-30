@@ -12,6 +12,10 @@ import { household } from "@/lib/mode";
 import { availableMonths, currentMonth } from "@/lib/ledger";
 import { formatCents } from "@/lib/money";
 import { PageHeader, Card, Stat, EmptyState, Bar } from "@/components/ui";
+import { db } from "@/db";
+import { accounts } from "@/db/schema";
+import { isNull } from "drizzle-orm";
+import { netWorth, coverageNote } from "@/lib/net-worth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +31,13 @@ export default async function GoalsPage() {
 
   const months = await availableMonths();
   const through = months[0] ?? currentMonth();
+
+  const balanceRows = await db
+    .select({ kind: accounts.kind, balanceCents: accounts.balanceCents })
+    .from(accounts)
+    .where(isNull(accounts.archivedAt));
+  const worth = netWorth(balanceRows);
+  const note = coverageNote(worth);
 
   const [buffer, flows, irregular, churn, medians, home] = await Promise.all([
     bufferStatus(through, 3),
@@ -64,6 +75,33 @@ export default async function GoalsPage() {
         title="Buffer & goals"
         subtitle={`Measured over ${flows.length} complete month${flows.length === 1 ? "" : "s"}`}
       />
+
+      <Card className="mb-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="text-lg">Net worth</h2>
+          <span className="figure text-2xl">
+            {worth.unknown ? "Unknown" : formatCents(worth.netCents, { signed: true })}
+          </span>
+        </div>
+        {worth.unknown ? null : (
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+            {formatCents(worth.assetsCents)} owned less{" "}
+            {formatCents(worth.liabilitiesCents)} owed, across{" "}
+            {worth.accountsKnown} account{worth.accountsKnown === 1 ? "" : "s"}.
+            Investments count here; the cash buffer below deliberately leaves
+            them out.
+          </p>
+        )}
+        {/*
+          Coverage stated plainly rather than left to be inferred from a number
+          that looks complete. An account with no balance is unknown, not
+          empty — a linked current account beside an unlinked mortgage would
+          otherwise read as a healthy net worth that is wrong by a house.
+        */}
+        {note ? (
+          <p className="mt-2 text-sm text-[var(--color-ink-muted)]">{note}</p>
+        ) : null}
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat

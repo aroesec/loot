@@ -1,6 +1,7 @@
 import { and, eq, isNull, isNotNull, max, min, sql } from "drizzle-orm";
 import type { Transaction as PlaidTransaction, RemovedTransaction } from "plaid";
 import { db } from "@/db";
+import { recordBalance } from "@/lib/balance-history";
 import { accounts, plaidItems, statements, transactions } from "@/db/schema";
 import { classifyTransactions } from "@/lib/classify";
 import { dedupeHash, normalizeDescription } from "@/lib/classify/normalize";
@@ -245,6 +246,13 @@ export async function syncItem(
             balanceUpdatedAt: new Date(),
           })
           .where(eq(accounts.plaidAccountId, a.account_id));
+
+        // Also keep the day's figure, so net worth has a line rather than
+        // only a latest value that every sync overwrites.
+        const linkedAccount = linked.find((l) => l.plaidAccountId === a.account_id);
+        if (linkedAccount) {
+          await recordBalance(linkedAccount.id, Math.round(current * 100));
+        }
       }
     } catch (err) {
       console.error("balance refresh failed (continuing with transactions)", err);

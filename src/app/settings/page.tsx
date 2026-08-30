@@ -588,10 +588,23 @@ export default async function SettingsPage({
                           maxLength={4} aria-label="Last 4" className="field"
                         />
                       </div>
-                      <input
-                        name="institution" defaultValue={a.institution ?? ""} placeholder="Institution"
-                        aria-label="Institution" className="field"
-                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          name="institution" defaultValue={a.institution ?? ""} placeholder="Institution"
+                          aria-label="Institution" className="field"
+                        />
+                        <input
+                          name="balance" inputMode="decimal" placeholder="Balance"
+                          defaultValue={a.balanceCents === null ? "" : (a.balanceCents / 100).toFixed(2)}
+                          aria-label="Balance" className="field"
+                        />
+                      </div>
+                      <p className="text-xs text-[var(--color-ink-faint)]">
+                        A balance is the one thing statements cannot tell the
+                        ledger. Set it here and it counts toward net worth; leave
+                        it blank and the account is treated as unknown rather
+                        than empty. On a card or a loan, enter what is owed.
+                      </p>
                       <button type="submit" className="btn">Save</button>
                     </form>
                   </details>

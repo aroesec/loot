@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  accountBalances,
   accounts,
   budgets,
   categories,
@@ -53,6 +54,7 @@ export type ExportBundle = {
   recurringSeries: unknown[];
   people: unknown[];
   mileageTrips: unknown[];
+  accountBalances: unknown[];
 };
 
 /**
@@ -121,7 +123,7 @@ export async function transactionsCsv(): Promise<string> {
 
 /** Everything the person created, in a shape another deployment can read. */
 export async function exportBundle(): Promise<ExportBundle> {
-  const [acct, cats, txns, rules, budg, gls, series, ppl, miles] = await Promise.all([
+  const [acct, cats, txns, rules, budg, gls, series, ppl, miles, balances] = await Promise.all([
     db.select().from(accounts),
     db.select().from(categories),
     db.select().from(transactions).orderBy(asc(transactions.postedOn)),
@@ -133,6 +135,9 @@ export async function exportBundle(): Promise<ExportBundle> {
     // it, and archiving is how this app retires a row without deleting it.
     db.select().from(people).orderBy(asc(people.name)),
     db.select().from(mileageTrips).orderBy(asc(mileageTrips.droveOn)),
+    // Not reconstructable: Plaid does not hand back history, so an export
+    // without this loses the net worth line permanently.
+    db.select().from(accountBalances).orderBy(asc(accountBalances.capturedOn)),
   ]);
 
   /*
@@ -153,9 +158,10 @@ export async function exportBundle(): Promise<ExportBundle> {
   return {
     exportedAt: new Date().toISOString(),
     application: "loot",
-    // 2 added `people`, 3 `mileageTrips`. Only ever grows by adding keys, so a
-    // reader written against an older version still finds what it knew about.
-    formatVersion: 3,
+    // 2 added `people`, 3 `mileageTrips`, 4 `accountBalances`. Only ever grows
+    // by adding keys, so a reader written against an older version still finds
+    // everything it knew about.
+    formatVersion: 4,
     counts: {
       accounts: acct.length,
       categories: cats.length,
@@ -166,6 +172,7 @@ export async function exportBundle(): Promise<ExportBundle> {
       recurringSeries: series.length,
       people: ppl.length,
       mileageTrips: miles.length,
+      accountBalances: balances.length,
     },
     accounts: plain(acct),
     categories: plain(cats),
@@ -176,5 +183,6 @@ export async function exportBundle(): Promise<ExportBundle> {
     recurringSeries: plain(series),
     people: plain(ppl),
     mileageTrips: plain(miles),
+    accountBalances: plain(balances),
   };
 }
