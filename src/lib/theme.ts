@@ -1,6 +1,13 @@
 import { db } from "@/db";
 import { settings } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import {
+  isSafeThemeValue,
+  safeThemeValue,
+  themeToCss as renderThemeCss,
+} from "./theme-css";
+
+export { isSafeThemeValue, safeThemeValue } from "./theme-css";
 
 /**
  * The theme is a flat set of CSS custom properties stored as JSON. Every
@@ -198,7 +205,10 @@ export const THEME_PRESETS: Array<{
  * grey beats throwing out of a root layout for a chrome color.
  */
 export function themeToken(tokens: ThemeTokens, key: string): string {
-  return tokens[key] ?? THEME_DEFAULTS[key] ?? "#808080";
+  // Sanitised for the same reason `themeToCss` is: this value reaches the web
+  // manifest and is interpolated into the generated SVG icon, both of which are
+  // markup a raw value could break out of.
+  return safeThemeValue(tokens[key], THEME_DEFAULTS[key] ?? "#808080");
 }
 
 export async function loadTheme(): Promise<ThemeTokens> {
@@ -235,16 +245,5 @@ export async function saveTheme(tokens: ThemeTokens): Promise<void> {
 
 /** Render the token map as a CSS block for the document head. */
 export function themeToCss(tokens: ThemeTokens): string {
-  const light: string[] = [];
-  const dark: string[] = [];
-
-  for (const [key, value] of Object.entries(tokens)) {
-    if (key.startsWith("dark-")) {
-      dark.push(`--${key.slice(5)}: ${value};`);
-    } else {
-      light.push(`--${key}: ${value};`);
-    }
-  }
-
-  return `:root{${light.join("")}}\n:root[data-theme="dark"]{${dark.join("")}}`;
+  return renderThemeCss(tokens, THEME_DEFAULTS);
 }

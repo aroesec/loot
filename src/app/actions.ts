@@ -33,6 +33,7 @@ import { unmergeTransaction, markCleared } from "@/lib/reconcile";
 import { createMcpToken, revokeMcpToken } from "@/lib/mcp/tokens";
 import { generateInsights, setInsightStatus } from "@/lib/insights";
 import { saveTheme, THEME_DEFAULTS, type ThemeTokens } from "@/lib/theme";
+import { isSafeThemeValue } from "@/lib/theme-css";
 import { currentMonth } from "@/lib/ledger";
 import { setLedgerMode, setHousehold, setBusinessLogo } from "@/lib/mode";
 import { validateLogo } from "@/lib/logo";
@@ -327,7 +328,11 @@ export async function saveThemeAction(formData: FormData) {
   const tokens: ThemeTokens = {};
   for (const key of Object.keys(THEME_DEFAULTS)) {
     const value = formData.get(`token.${key}`);
-    if (typeof value === "string" && value.trim()) tokens[key] = value.trim();
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    // Rejected here as well as at render, so a value that could break out of
+    // the <style> block never reaches the database in the first place.
+    if (trimmed && isSafeThemeValue(trimmed)) tokens[key] = trimmed;
   }
   await saveTheme(tokens);
   revalidatePath("/", "layout");
