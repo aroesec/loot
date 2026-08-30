@@ -1,10 +1,10 @@
 # Loot
 
-A personal finance ledger you host yourself. Upload bank and card statements,
-or connect an account, and it works out where the money went and what the month
-actually cost.
+A finance ledger you host yourself. Upload bank and card statements, or connect
+an account, and it works out where the money went — for a household, or for a
+sole proprietorship that has to answer to a tax return.
 
-Single user, one household, one database. Nothing leaves your deployment.
+Single user, one database, nothing leaving your deployment.
 
 ```
 Income          $9,140.22
@@ -18,28 +18,52 @@ Restaurants       $612.40   ▇▇▇▇▇▇
 
 ## Features
 
-* Reads CSV statements from any bank, and PDF statements if a model is
-  configured
-* Classifies every transaction with merchant rules first, a model second, and
-  never a guess
-* Credit card payments are not counted as spending, so a charge and its
-  payment do not both hit the budget
-* Optional bank syncing through Plaid, with two years of history
-* Budgets, recurring detection, spending trends, and a cash buffer that
-  measures how long your money would last
-* Compares categories against published national averages, adjusted for
-  household size and region
-* Business mode, with a P&L, quarterly periods, Schedule C lines, your logo on
-  reports, and a roster of the people you pay
-* Alerts by web push or SMS, only when something is actually worth saying
-* An MCP server, so you can ask Claude what you spent and log purchases by
-  voice
+* CSV from any bank; PDF statements and screenshots when a model is configured
+* Merchant rules first, a model second, and never a guess — whatever stays
+  unresolved is filed as Uncategorized rather than assigned
+* Corrections teach rules, and re-file the history that matches them
+* Card payments never count as spending, and a payment to a card the ledger
+  cannot see is counted as debt rather than quietly dropped
+* Budgets, recurring detection, trends, and a cash buffer measured against your
+  own median month rather than a rule of thumb
+* Comparisons with published national averages, scaled by household size and
+  region
 * Split a transaction across categories, reversibly
-* Export everything as CSV or JSON, whenever you want, with no lock-in
+* Optional bank syncing through Plaid; optional push and SMS alerts
+* An MCP server: ask Claude what you spent, or log a purchase by voice
+* Export everything as CSV or JSON, whenever you want
+
+### Business mode
+
+The same ledger asking a different question — what the profit is, and what is
+deductible. Its own chart of accounts, and its own reports.
+
+```
+Revenue        $48,200.00
+Cost of sales  $11,340.00
+Gross profit   $36,860.00   76% margin
+
+Operating      $14,905.00
+Net profit     $21,955.00
+
+Set aside       $7,591.00   $3,102 self-employment + $4,489 income tax
+```
+
+* Profit and loss by month or quarter, with gross margin kept separate from net
+* A Schedule C summary by tax line, face value and deductible share side by
+  side, exportable as CSV
+* Self-employment tax computed exactly from profit. Income tax uses a rate you
+  supply, because it depends on your filing status and the rest of your return
+  — the app will not invent one and present it next to an exact figure
+* Owner's draw is not an expense. Counting it as one understates profit and
+  overstates deductions, which on a tax return is not a cosmetic error
+* Quarterly estimate dates, which do not line up with the quarters they cover
+* Your business name and logo on reports, and a roster of the employees and
+  contractors you pay
 
 ## Setup
 
-Requires Node 22 or newer, pnpm, and a Postgres database.
+Node 22 or newer, pnpm, and a Postgres database.
 
 ```sh
 git clone https://github.com/aroesec/loot.git
@@ -59,17 +83,17 @@ SESSION_SECRET="at least 32 characters"
 Then:
 
 ```sh
-pnpm db:migrate
-pnpm db:seed
+pnpm db:migrate && pnpm db:seed
 pnpm dev
 ```
 
-Open http://localhost:3000 and sign in with `APP_PASSWORD`. Upload a CSV from
-your bank to get started.
+Sign in at http://localhost:3000 with `APP_PASSWORD`. First run asks whether
+the ledger is personal or a business — it picks the chart of accounts, and is
+switchable later. Upload a CSV and it starts classifying.
 
-Everything else is optional. Without an API key the classifier runs on rules
-only. Without Plaid credentials you upload statements by hand. The app is fully
-usable either way.
+Everything else is optional and the app is fully usable without it: no API key
+means the classifier runs on rules alone, and no Plaid credentials means you
+upload statements by hand.
 
 | Optional | Set |
 |---|---|
@@ -87,15 +111,15 @@ Any Node host and any Postgres. Docker Compose and Vercel are both covered in
 [docs/deploy.md](docs/deploy.md).
 
 A prebuilt image is published to GitHub Container Registry on every push to
-`main`, so you do not have to build it:
+`main` and every release tag:
 
 ```sh
 docker pull ghcr.io/aroesec/loot:latest
 docker compose up -d
 ```
 
-Pin to `0.1.0` or a `sha-` tag for anything you care about. `latest` moves,
-and registry tags carry no `v` prefix even though the git tags do.
+Pin to `0.2.0` or a `sha-` tag for anything you care about. `latest` moves, and
+registry tags carry no `v` prefix even though the git tags do.
 
 ## Documentation
 
@@ -120,17 +144,16 @@ and registry tags carry no `v` prefix even though the git tags do.
 | `pnpm dev` `build` `test` `typecheck` | the usual |
 | `pnpm auth:hash '<password>'` | generate `APP_PASSWORD_HASH` |
 | `pnpm db:migrate` then `db:seed` | schema, then the chart of accounts |
-| `pnpm db:reclassify` | re-run the pipeline, skipping manual rows |
-| `pnpm db:reconcile-debt` | after any import or reclassify |
+| `pnpm db:reclassify` then `db:reconcile-debt` | re-file history; always in that order, or real spending disappears |
 | `pnpm db:backup` | verified `pg_dump` into `backups/` |
-| `pnpm db:audit-period [YYYY-MM]` | reconcile a month four ways |
-| `pnpm db:audit-splits` | prove every split still sums to its original |
-| `pnpm icons` | re-render app icons from the theme |
+| `pnpm db:audit-income` `db:audit-period` `db:audit-splits` | prove the totals from outside the code |
+
+`package.json` is the source of truth for the rest.
 
 ## Stack
 
 Next.js 15 with the App Router, Postgres via Drizzle, Tailwind. The Anthropic
-and Plaid SDKs are optional at runtime and sit behind interfaces, so neither is
+and Plaid SDKs sit behind interfaces and are optional at runtime, so neither is
 required to run the app.
 
 ## Contributing
