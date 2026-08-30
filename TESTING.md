@@ -16,11 +16,11 @@ Measured on this suite:
 
 | | value |
 |---|---|
-| Tests | 294 across 22 files |
-| Wall clock | 535ms |
-| Per test | **1.8ms** |
+| Tests | 329 across 27 files |
+| Wall clock | 701ms |
+| Per test | **2.1ms** |
 | Tests that touch a database | **0** |
-| Test code as a share of source | 13.0% (3,153 / 24,190 lines) |
+| Test code as a share of source | 13.6% (3,460 / 25,358 lines) |
 
 The whole suite runs in about half a second, which means it can run on every
 save. That is the property to protect. It exists because of one rule, applied
@@ -30,18 +30,19 @@ consistently:
 
 Importing the database pulls in the whole env schema, which needs a live
 `DATABASE_URL` to load. A test for such a module needs a database, a schema, and
-seed data, and now costs tens of milliseconds instead of one. Ten modules have
-been split out specifically to stay reachable: `classify/match.ts`, `dates.ts`,
-`reconcile/coverage.ts`, `db/dump-text.ts`, `review-suggest.ts`,
+seed data, and now costs tens of milliseconds instead of one. Fifteen modules
+have been split out specifically to stay reachable: `classify/match.ts`,
+`dates.ts`, `reconcile/coverage.ts`, `db/dump-text.ts`, `review-suggest.ts`,
 `http/client-address.ts`, `tax-lines.ts`, `tax-math.ts`, `logo.ts`,
-`people-validate.ts`.
+`people-validate.ts`, `account-kinds.ts`, `mileage.ts`, `budget-rollover.ts`,
+`net-worth.ts`, `theme-css.ts`.
 
 The split pays twice. A DB-free module is also safe to import from a client
 component, which is why the onboarding form can read the logo's accepted types
 straight from the constant the server validates against instead of repeating
 the list.
 
-There are 92 modules under `src/lib` and `src/db` and 22 test files. That ratio
+There are 98 modules under `src/lib` and `src/db` and 27 test files. That ratio
 is correct and deliberate. **Never add a test file merely because a source file
 exists.**
 

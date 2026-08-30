@@ -6,6 +6,43 @@ Notable changes, newest first. This project follows
 
 ## Unreleased
 
+### Added
+- Net worth on Buffer & goals, with how much of it is unknown stated alongside
+  it. An account with no balance is counted as unknown rather than as zero, and
+  the page says how many are missing — a linked current account beside an
+  unlinked mortgage would otherwise read as a healthy figure that is wrong by
+  the size of a house
+- Balances can be typed in on Settings, so net worth does not require linking a
+  bank. A balance is the one thing a statement cannot tell the ledger
+- Budgets can carry their balance between months, per budget: carry what is
+  left, carry both ways, or neither. Off by default, and switching it on is not
+  retroactive
+- A business mileage log, rated by the day each trip was driven. Rates change
+  mid-year — 2026 ran at 72.5¢ through June and 76¢ after — so a year's miles
+  are summed per trip rather than multiplied by one rate. Shown on Schedule C
+  but not added to the deductible total, because the standard rate replaces
+  deducting what the vehicle actually cost rather than adding to it
+- Accounts and roster entries can be renamed and corrected after they are
+  created
+
+### Fixed
+- **Security.** A theme value could break out of the `<style>` element it is
+  rendered into and run script on every page, including `/login`, which is
+  served before anyone signs in. Setting one needs a session, so this was a way
+  to persist rather than a way in. Values are now checked against what a token
+  can legitimately be, at render as well as on save
+- **Security.** A password digest is now required to be the length the app
+  produces. A hash truncated in transit was checked against a correspondingly
+  shorter key and still accepted the password
+- The budgets header subtracted spending from the sum of the targets while the
+  lines below used the carried figure, so the page disagreed with itself once
+  anything rolled over
+
+### Changed
+- The JSON export carries the mileage log and the balance history
+  (`formatVersion` 4). Plaid does not hand history back, so an export without it
+  would lose the record permanently
+
 ## 0.2.0
 
 ### Added

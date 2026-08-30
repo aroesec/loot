@@ -26,6 +26,11 @@ Restaurants       $612.40   ▇▇▇▇▇▇
   cannot see is counted as debt rather than quietly dropped
 * Budgets, recurring detection, trends, and a cash buffer measured against your
   own median month rather than a rule of thumb
+* Budgets can carry what you did not spend into the next month, per budget, so
+  a lumpy cost saved for over three months is a plan rather than three wins and
+  a failure
+* Net worth, with how much of it is unknown said out loud — an account with no
+  balance is unknown, not empty
 * Comparisons with published national averages, scaled by household size and
   region
 * Split a transaction across categories, reversibly
@@ -58,6 +63,8 @@ Set aside       $7,591.00   $3,102 self-employment + $4,489 income tax
 * Owner's draw is not an expense. Counting it as one understates profit and
   overstates deductions, which on a tax return is not a cosmetic error
 * Quarterly estimate dates, which do not line up with the quarters they cover
+* A mileage log rated by the day each trip was driven, because the IRS revises
+  the rate mid-year and a year's miles at one rate is wrong for half of it
 * Your business name and logo on reports, and a roster of the employees and
   contractors you pay
 
