@@ -1,4 +1,4 @@
-import { sql, and, eq, gte, lte, desc } from "drizzle-orm";
+import { sql, and, eq, gte, lte, desc, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { transactions, categories, budgets } from "@/db/schema";
 
@@ -13,6 +13,7 @@ import { transactions, categories, budgets } from "@/db/schema";
 
 export * from "./dates";
 import { monthBounds, yearBounds, shiftMonth, type MonthKey } from "./dates";
+import { carriedInCents, type RolloverMode } from "./budget-rollover";
 
 export type CategoryTotal = {
   categoryId: string | null;
@@ -335,12 +336,102 @@ export type BudgetLine = {
    */
   paceRatio: number | null;
   status: "under" | "on_track" | "at_risk" | "over";
+  /** How this budget carries between months. */
+  rollover: RolloverMode;
+  /** Carried in from earlier months. Negative only under `both`. */
+  carriedCents: number;
+  /** Budget plus carry, floored at zero. Equals `budgetCents` when rollover is off. */
+  availableCents: number;
 };
+
+
+/**
+ * Carried balances for budgets that asked for one, keyed by category.
+ *
+ * One grouped query for every rolling budget rather than one per category, and
+ * a single window covering all of them — a budget page with a dozen rolling
+ * categories should not be a dozen round trips.
+ */
+async function carriedBalances(
+  rows: Array<{
+    categoryId: string;
+    amountCents: number;
+    effectiveFrom: string;
+    rollover: RolloverMode;
+  }>,
+  month: MonthKey,
+): Promise<Map<string, number>> {
+  const rolling = rows.filter((r) => r.rollover !== "none");
+  const carried = new Map<string, number>();
+  if (rolling.length === 0) return carried;
+
+  // 24 months back at most. A budget older than that carrying its entire
+  // history would produce a figure nobody can reconcile against anything.
+  const earliestAllowed = shiftMonth(month, -24);
+  const firstMonth = rolling
+    .map((r) => {
+      const from = r.effectiveFrom.slice(0, 7);
+      return from < earliestAllowed ? earliestAllowed : from;
+    })
+    .sort()[0]!;
+
+  const priorEnd = shiftMonth(month, -1);
+  // The budget's own month is the first one that can carry anything in, so a
+  // budget starting this month has no history and is skipped entirely.
+  if (priorEnd < firstMonth) return carried;
+
+  const { start } = monthBounds(firstMonth);
+  const { end } = monthBounds(priorEnd);
+
+  const spendByMonth = await db
+    .select({
+      categoryId: transactions.categoryId,
+      month: sql<string>`to_char(${transactions.postedOn}, 'YYYY-MM')`,
+      spend: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.amountCents} < 0 THEN -${transactions.amountCents} ELSE 0 END), 0)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        gte(transactions.postedOn, start),
+        lte(transactions.postedOn, end),
+        eq(transactions.isTransfer, false),
+        inArray(
+          transactions.categoryId,
+          rolling.map((r) => r.categoryId),
+        ),
+      ),
+    )
+    .groupBy(transactions.categoryId, sql`to_char(${transactions.postedOn}, 'YYYY-MM')`);
+
+  const spend = new Map<string, number>();
+  for (const row of spendByMonth) {
+    spend.set(`${row.categoryId}:${row.month}`, Number(row.spend));
+  }
+
+  for (const budget of rolling) {
+    const from = budget.effectiveFrom.slice(0, 7);
+    const startMonth = from < earliestAllowed ? earliestAllowed : from;
+
+    const months: Array<{ budgetedCents: number; spentCents: number }> = [];
+    for (let m = startMonth; m <= priorEnd; m = shiftMonth(m, 1)) {
+      months.push({
+        budgetedCents: budget.amountCents,
+        spentCents: spend.get(`${budget.categoryId}:${m}`) ?? 0,
+      });
+    }
+
+    carried.set(budget.categoryId, carriedInCents(budget.rollover, months));
+  }
+
+  return carried;
+}
 
 export async function budgetStatus(month: MonthKey): Promise<{
   month: MonthKey;
   lines: BudgetLine[];
   totalBudgetCents: number;
+  totalAvailableCents: number;
+  totalCarriedCents: number;
   totalSpentCents: number;
 }> {
   const { start, end } = monthBounds(month);
@@ -354,6 +445,7 @@ export async function budgetStatus(month: MonthKey): Promise<{
       name: categories.name,
       color: categories.color,
       effectiveFrom: budgets.effectiveFrom,
+      rollover: budgets.rollover,
     })
     .from(budgets)
     .innerJoin(categories, eq(budgets.categoryId, categories.id))
@@ -390,6 +482,17 @@ export async function budgetStatus(month: MonthKey): Promise<{
     spendRows.map((r) => [r.categoryId ?? "", Number(r.spend)]),
   );
 
+  /*
+   * Carried balances, for the budgets that asked for one.
+   *
+   * The window starts at this budget version's `effectiveFrom`, because
+   * changing the amount closes the old row and opens a new one — a new amount
+   * is a new plan, and carrying against a figure that was never in force would
+   * produce a number that looks reasonable and is not. Capped at 24 months so
+   * a long-lived budget cannot turn this into an unbounded scan.
+   */
+  const carried = await carriedBalances([...latest.values()], month);
+
   // Pace only makes sense for a month in progress.
   const today = new Date().toISOString().slice(0, 10);
   const isCurrent = today >= start && today <= end;
@@ -399,7 +502,9 @@ export async function budgetStatus(month: MonthKey): Promise<{
 
   const lines: BudgetLine[] = [...latest.values()].map((b) => {
     const spentCents = spendMap.get(b.categoryId) ?? 0;
-    const usedFraction = b.amountCents > 0 ? spentCents / b.amountCents : 0;
+    const carriedCents = carried.get(b.categoryId) ?? 0;
+    const availableCents = Math.max(0, b.amountCents + carriedCents);
+    const usedFraction = availableCents > 0 ? spentCents / availableCents : 0;
     const paceRatio =
       monthProgress && monthProgress > 0 ? usedFraction / monthProgress : null;
 
@@ -415,8 +520,11 @@ export async function budgetStatus(month: MonthKey): Promise<{
       name: b.name,
       color: b.color,
       budgetCents: b.amountCents,
+      rollover: b.rollover,
+      carriedCents,
+      availableCents,
       spentCents,
-      remainingCents: b.amountCents - spentCents,
+      remainingCents: availableCents - spentCents,
       usedFraction,
       monthProgress,
       paceRatio,
@@ -431,6 +539,15 @@ export async function budgetStatus(month: MonthKey): Promise<{
     lines,
     totalBudgetCents: lines.reduce((a, l) => a + l.budgetCents, 0),
     totalSpentCents: lines.reduce((a, l) => a + l.spentCents, 0),
+    /*
+     * What is actually spendable, which is what "remaining" has to be measured
+     * against. Summing the bare targets instead left the header disagreeing
+     * with the lines beneath it the moment any budget carried a balance —
+     * exactly the two-numbers-one-page failure `ledger.ts` exists to prevent.
+     * Equal to `totalBudgetCents` while no budget rolls over.
+     */
+    totalAvailableCents: lines.reduce((a, l) => a + l.availableCents, 0),
+    totalCarriedCents: lines.reduce((a, l) => a + l.carriedCents, 0),
   };
 }
 

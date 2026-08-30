@@ -167,6 +167,16 @@ export const insightSeverity = pgEnum("insight_severity", [
  */
 export const personType = pgEnum("person_type", ["employee", "contractor"]);
 
+/**
+ * Whether a budget carries its unspent balance into the next month.
+ *
+ * `none` is the default and is what every budget did before this existed, so
+ * turning the feature on cannot move a number nobody asked to move. `under`
+ * carries a surplus but forgives a deficit; `both` carries the deficit too,
+ * which is envelope budgeting proper. See `lib/budget-rollover.ts`.
+ */
+export const budgetRollover = pgEnum("budget_rollover", ["none", "under", "both"]);
+
 // ---------------------------------------------------------------------------
 // Accounts
 // ---------------------------------------------------------------------------
@@ -726,6 +736,7 @@ export const budgets = pgTable(
       .references(() => categories.id, { onDelete: "cascade" }),
     /** Monthly target as a positive number of cents. */
     amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    rollover: budgetRollover("rollover").notNull().default("none"),
     effectiveFrom: date("effective_from").notNull(),
     /** NULL = still in force. */
     effectiveTo: date("effective_to"),

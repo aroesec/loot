@@ -41,6 +41,7 @@ import { validateLogo } from "@/lib/logo";
 import { validatePerson } from "@/lib/people-validate";
 import { isAccountKind, normalizeLast4 } from "@/lib/account-kinds";
 import { tenthsFromMiles } from "@/lib/mileage";
+import { isRolloverMode } from "@/lib/budget-rollover";
 
 async function requireSession() {
   if (!(await isAuthenticated())) redirect("/login");
@@ -233,6 +234,11 @@ export async function setBudgetAction(formData: FormData) {
   const amountCents = Math.round(Math.abs(dollars) * 100);
   const effectiveFrom = `${currentMonth()}-01`;
 
+  // Checked rather than cast, and defaulting to the behaviour a budget has
+  // always had: a form post is not obliged to have come from the select.
+  const rawRollover = String(formData.get("rollover") ?? "none");
+  const rollover = isRolloverMode(rawRollover) ? rawRollover : "none";
+
   // Setting a budget to zero means "no budget" — close the current one out
   // rather than leaving a 0 target that reads as 100% over on any spend.
   if (amountCents === 0) {
@@ -268,7 +274,7 @@ export async function setBudgetAction(formData: FormData) {
   if (existing[0]) {
     await db
       .update(budgets)
-      .set({ amountCents })
+      .set({ amountCents, rollover })
       .where(eq(budgets.id, existing[0].id));
   } else {
     // Close any open-ended prior budget so history stays accurate.
@@ -278,7 +284,7 @@ export async function setBudgetAction(formData: FormData) {
       .where(
         and(eq(budgets.categoryId, categoryId), sql`${budgets.effectiveTo} IS NULL`),
       );
-    await db.insert(budgets).values({ categoryId, amountCents, effectiveFrom });
+    await db.insert(budgets).values({ categoryId, amountCents, effectiveFrom, rollover });
   }
 
   revalidatePath("/budgets");

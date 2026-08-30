@@ -12,6 +12,7 @@ import {
   availableMonths,
   monthSummary,
 } from "@/lib/ledger";
+import { ROLLOVER_MODES } from "@/lib/budget-rollover";
 import { formatCents } from "@/lib/money";
 import { PageHeader, Card, Bar, EmptyState } from "@/components/ui";
 import { setBudgetAction } from "../actions";
@@ -82,7 +83,15 @@ export default async function BudgetsPage({
           <div className="mb-4 grid gap-4 sm:grid-cols-3">
             <Card>
               <div className="text-xs uppercase tracking-wide text-[var(--color-ink-faint)]">Budgeted</div>
-              <div className="figure mt-2 text-2xl">{formatCents(status.totalBudgetCents)}</div>
+              <div className="figure mt-2 text-2xl">{formatCents(status.totalAvailableCents)}</div>
+              {status.totalCarriedCents !== 0 ? (
+                <div className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                  {formatCents(status.totalBudgetCents)} set
+                  {status.totalCarriedCents > 0
+                    ? ` + ${formatCents(status.totalCarriedCents)} carried in`
+                    : ` − ${formatCents(-status.totalCarriedCents)} carried over`}
+                </div>
+              ) : null}
             </Card>
             <Card>
               <div className="text-xs uppercase tracking-wide text-[var(--color-ink-faint)]">Spent</div>
@@ -90,8 +99,8 @@ export default async function BudgetsPage({
             </Card>
             <Card>
               <div className="text-xs uppercase tracking-wide text-[var(--color-ink-faint)]">Remaining</div>
-              <div className={`figure mt-2 text-2xl ${status.totalBudgetCents - status.totalSpentCents < 0 ? "text-negative" : "text-positive"}`}>
-                {formatCents(status.totalBudgetCents - status.totalSpentCents, { signed: true })}
+              <div className={`figure mt-2 text-2xl ${status.totalAvailableCents - status.totalSpentCents < 0 ? "text-negative" : "text-positive"}`}>
+                {formatCents(status.totalAvailableCents - status.totalSpentCents, { signed: true })}
               </div>
             </Card>
           </div>
@@ -114,7 +123,7 @@ export default async function BudgetsPage({
                         <span className={`chip ${copy.className}`}>{copy.label}</span>
                         <span className="figure text-sm">
                           {formatCents(line.spentCents)}
-                          <span className="text-[var(--color-ink-faint)]"> / {formatCents(line.budgetCents)}</span>
+                          <span className="text-[var(--color-ink-faint)]"> / {formatCents(line.availableCents)}</span>
                         </span>
                       </span>
                     </div>
@@ -127,9 +136,33 @@ export default async function BudgetsPage({
                         {line.paceRatio !== null
                           ? ` · ${line.paceRatio > 1 ? "spending faster than" : "tracking below"} the calendar`
                           : ""}
+                        {line.carriedCents !== 0 ? (
+                          <span className="ml-1 text-[var(--color-ink-faint)]">
+                            · {formatCents(line.budgetCents)} budget
+                            {line.carriedCents > 0
+                              ? ` + ${formatCents(line.carriedCents)} carried in`
+                              : ` − ${formatCents(-line.carriedCents)} carried over from before`}
+                          </span>
+                        ) : null}
                       </span>
                       <form action={setBudgetAction} className="flex items-center gap-2">
                         <input type="hidden" name="categoryId" value={line.categoryId} />
+                        {/*
+                          The carry is spelled out rather than folded silently
+                          into the total: a groceries line reading $680 against
+                          a $600 budget has to be explainable on the page where
+                          it is read.
+                        */}
+                        <select
+                          name="rollover"
+                          defaultValue={line.rollover}
+                          aria-label={`${line.name} rollover`}
+                          className="field !w-auto !py-1 text-xs"
+                        >
+                          {ROLLOVER_MODES.map((m) => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
                         <label htmlFor={`b-${line.slug}`} className="sr-only">
                           {line.name} budget
                         </label>
