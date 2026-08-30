@@ -252,6 +252,26 @@ These are defaults for organizing records, not tax advice.
 profit`, plus quarterly periods because US estimated tax is paid on that
 cadence and is owed on profit rather than cashflow.
 
+**The logo is base64 in two `settings` columns**, not a file path or an object
+store. A logo is a few hundred kilobytes, and the alternatives each add
+something this app refuses to require: a writable filesystem it does not
+otherwise need, or a hosted bucket that would put the deployment's data
+somewhere else. It is rendered as a `data:` URI, so no route serves it and no
+request can leak it to someone unauthenticated. It is stored exactly as
+uploaded — `sharp` is a build-time tool here (see `db/icons.ts`), and a resize
+at request time is a dependency that breaks on a stranger's host for no gain.
+Only the mime type and a 1MB cap are enforced.
+
+**The `people` roster is a contact list, not an account system.** Employees
+and contractors are rows the owner types for their own reference: no login, no
+payroll, and — importantly — no foreign key from any transaction. The pull
+toward linking them is obvious and was declined deliberately. Per-contractor
+payment totals are a 1099 feature, and a 1099 feature that is *nearly* right is
+worse than none, because the number looks authoritative on a form. It would
+also need the classification path, which the invariants above guard closely.
+Archiving retires a row rather than deleting it, so a name that appears in a
+past export still resolves.
+
 ## Tax reporting (`src/lib/tax.ts`, `tax-lines.ts`, `tax-math.ts`)
 
 `/schedule-c` groups a business year by the Schedule C line each category
@@ -291,6 +311,21 @@ First run asks personal or business before anything else, because that choice
 picks the chart of accounts and a month spent in the wrong one is a month filed
 against categories the reports never read. Previously it was a control in
 Settings that nothing pointed at.
+
+It is a **persistent choice, not a step**. The original flow gated the
+mode-specific fields behind a Continue button, which meant deciding before
+seeing what either answer asked for. The two field sets are mutually exclusive
+by mode, so the gate bought nothing that switching a tab does not: the picker
+stays on screen and the fields below it re-render. The form underneath is
+unchanged — one `<form>`, one hidden `mode` input, one submit — because the
+choice is client state and there is still only one thing to write.
+
+The business step also offers a logo and a bank connection, since both were
+otherwise things you had to know to go looking for in Settings afterwards. The
+bank block is hidden entirely when Plaid is unconfigured: `PlaidLinkButton`
+degrades by naming the environment variables to set, which is the right answer
+on a settings page and noise during a first run — and running without Plaid
+credentials is how most people meet this app.
 
 `onboarded_at` records that the questions were **asked**, not how they were
 answered. Inferring setup from the presence of transactions would re-open the
@@ -519,11 +554,15 @@ merely asserted.
 
 ## Pure logic lives outside modules that import the database
 
-Three modules have been split out for this: `match.ts` from `rules.ts`,
-`dates.ts` from `ledger.ts`, and `reconcile/coverage.ts` from
-`card-payments.ts`. Importing `@/db` pulls in the whole env schema, which puts
-anything in that module out of reach of unit tests. Put testable logic in a
-DB-free file and re-export it.
+Ten modules have been split out for this, the first three being `match.ts` from
+`rules.ts`, `dates.ts` from `ledger.ts`, and `reconcile/coverage.ts` from
+`card-payments.ts`. [TESTING.md](TESTING.md) keeps the current list. Importing
+`@/db` pulls in the whole env schema, which puts anything in that module out of
+reach of unit tests. Put testable logic in a DB-free file and re-export it.
+
+The second payoff is that a DB-free module is safe to import from a client
+component, so a form can read the exact constant the server validates against
+rather than repeating it.
 
 ## Gotchas hit while building this
 

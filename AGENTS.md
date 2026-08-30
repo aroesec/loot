@@ -176,12 +176,18 @@ test. When logic is worth testing, it goes in a DB-free file and is re-exported.
 
 Already split for this reason: `classify/match.ts`, `dates.ts`,
 `reconcile/coverage.ts`, `db/dump-text.ts`, `review-suggest.ts`,
-`http/client-address.ts`, `tax-lines.ts`, `tax-math.ts`.
+`http/client-address.ts`, `tax-lines.ts`, `tax-math.ts`, `logo.ts`,
+`people-validate.ts`.
 
 ### Client components
 
 - A client component must not import `@/lib/classify` or anything else that
   reaches the database. Shared constants live in `classify/constants.ts`.
+- A DB-free module is safe to import from a client component, and that is the
+  way to stop a form drifting from the rule the server enforces: the logo
+  input's `accept` and size cap come from `logo.ts`, and the roster's type
+  picker from `people-validate.ts`, which are the same constants the actions
+  validate against.
 - Server components are the default. Add `"use client"` only for state, effects
   or event handlers.
 
@@ -248,7 +254,14 @@ is set. That path must keep working: it is how most people will first run this.
 - Send ledger data to a third party, or add a feature that needs a hosted service
   to work.
 - Put a credential in the export. Plaid tokens, push subscriptions and MCP token
-  hashes are excluded on purpose; none of them is the person's ledger.
+  hashes are excluded on purpose; none of them is the person's ledger. The test
+  for the other direction is whether the person typed it: a roster they built by
+  hand exists nowhere else and ships with the export, while a theme or a tax
+  rate is configuration for this deployment.
+- Link the `people` roster to transactions. It is a contact list the owner keeps
+  for reference, and the obvious next step — totals per contractor — is a 1099
+  feature. One that is nearly right is worse than none, because the number ends
+  up on a form that makes it look authoritative.
 - Cache financial pages in the service worker. It would serve a stale balance
   after logout.
 - Commit anything from `.env.local`, `backups/`, or `.vercel/`.
