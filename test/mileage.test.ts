@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_MILES_TENTHS,
   mileageRate,
   tenthsFromMiles,
   totalDeduction,
@@ -70,5 +71,13 @@ describe("tenthsFromMiles", () => {
   it("rejects negative and non-numeric input", () => {
     expect(tenthsFromMiles("-5")).toBeNull();
     expect(tenthsFromMiles("twelve")).toBeNull();
+    expect(tenthsFromMiles("1e400")).toBeNull();
+  });
+
+  it("refuses a distance the column cannot hold", () => {
+    // miles_tenths is an int4. Accepting more does not store a big number, it
+    // raises "integer out of range" out of a form submission.
+    expect(tenthsFromMiles(MAX_MILES_TENTHS / 10)).toBe(MAX_MILES_TENTHS);
+    expect(tenthsFromMiles(MAX_MILES_TENTHS)).toBeNull();
   });
 });

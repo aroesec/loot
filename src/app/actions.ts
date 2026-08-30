@@ -36,6 +36,7 @@ import { generateInsights, setInsightStatus } from "@/lib/insights";
 import { saveTheme, THEME_DEFAULTS, type ThemeTokens } from "@/lib/theme";
 import { isSafeThemeValue } from "@/lib/theme-css";
 import { currentMonth } from "@/lib/ledger";
+import { isIsoDate } from "@/lib/dates";
 import { setLedgerMode, setHousehold, setBusinessLogo } from "@/lib/mode";
 import { validateLogo } from "@/lib/logo";
 import { validatePerson } from "@/lib/people-validate";
@@ -503,7 +504,7 @@ export async function createMileageTripAction(formData: FormData) {
 
   // A date the database would reject, a distance that is not one, or a trip
   // with no stated business purpose — the purpose is what makes it deductible.
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(droveOn) || !purpose || milesTenths === null) return;
+  if (!isIsoDate(droveOn) || !purpose || milesTenths === null) return;
 
   await db.insert(mileageTrips).values({
     droveOn,

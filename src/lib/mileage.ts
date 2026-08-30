@@ -61,14 +61,24 @@ function nextYearOf(from: string): string {
 }
 
 /**
+ * The column's own ceiling. `miles_tenths` is an `int4`, so a value past its
+ * range does not become a big number — it becomes a Postgres error raised out
+ * of a form submission, which is user input reaching the database and failing
+ * there. 214 million miles is not a trip anyone drove.
+ */
+export const MAX_MILES_TENTHS = 2_147_483_647;
+
+/**
  * Miles are stored as tenths, because a log records 12.4 miles and a float
  * would put a fraction of a cent into a deduction. Same reason money is cents.
  */
+
 export function tenthsFromMiles(input: string | number): number | null {
   const n = typeof input === "number" ? input : Number(String(input).trim());
   if (!Number.isFinite(n) || n <= 0) return null;
   const tenths = Math.round(n * 10);
-  return tenths > 0 ? tenths : null;
+  if (tenths <= 0 || tenths > MAX_MILES_TENTHS) return null;
+  return tenths;
 }
 
 export function milesFromTenths(tenths: number): number {

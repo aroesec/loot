@@ -5,6 +5,7 @@ import {
   shiftMonth,
   monthLabel,
   currentMonth,
+  isIsoDate,
 } from "@/lib/dates";
 
 /**
@@ -272,5 +273,22 @@ describe("statement coverage ranges", () => {
     expect(isCovered("2026-08-01", r)).toBe(true);
     expect(isCovered("2026-08-31", r)).toBe(true);
     expect(isCovered("2026-09-01", r)).toBe(false);
+  });
+});
+
+/**
+ * `2026-13-45` matches every reasonable shape check and is rejected by
+ * Postgres, so a regex alone lets a form send user input to the database to
+ * fail there.
+ */
+describe("isIsoDate", () => {
+  it("accepts a real date and rejects one that only looks like it", () => {
+    expect(isIsoDate("2026-08-30")).toBe(true);
+    expect(isIsoDate("2026-13-45")).toBe(false);
+  });
+
+  it("rejects a day that does not exist in that month, and the wrong shape", () => {
+    expect(isIsoDate("2025-02-30")).toBe(false);
+    expect(isIsoDate("2026-2-3")).toBe(false);
   });
 });

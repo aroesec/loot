@@ -50,3 +50,18 @@ export function monthLabel(month: MonthKey): string {
 // ---------------------------------------------------------------------------
 // Monthly summary
 // ---------------------------------------------------------------------------
+
+/**
+ * A calendar-real ISO date, not merely a string shaped like one.
+ *
+ * `2026-13-45` matches every reasonable-looking regex and is rejected by
+ * Postgres, which means a shape check alone lets user input reach the database
+ * and fail there — an internal error surfacing from a form, which the error
+ * conventions in AGENTS.md exist to prevent. Round-tripping through `Date`
+ * catches the month and day that do not exist, including 30 February.
+ */
+export function isIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
