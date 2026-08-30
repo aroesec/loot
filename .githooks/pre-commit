@@ -1,0 +1,84 @@
+#!/bin/sh
+#
+# Refuses the two commits this project has actually had to clean up after.
+#
+# Enable with:
+#
+#     git config core.hooksPath .githooks
+#
+# It is a hook rather than a lint rule because the damage is done the moment
+# something is pushed: a secret in history has to be rotated, and a real
+# statement line has to be rewritten out of every clone that pulled it.
+#
+# Deliberate exceptions exist — `git commit --no-verify` — because a guard you
+# cannot override becomes a guard people stop enabling.
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+fail=0
+say() { printf '  %s\n' "$1"; }
+
+# --- Files that should never be committed --------------------------------
+
+secrets=$(printf '%s\n' "$staged" | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$')
+if [ -n "$secrets" ]; then
+  echo "pre-commit: refusing to commit an env file."
+  printf '%s\n' "$secrets" | while read -r f; do say "$f"; done
+  say "These hold DATABASE_URL, SESSION_SECRET and your password hash."
+  fail=1
+fi
+
+dumps=$(printf '%s\n' "$staged" | grep -E '^backups/|\.dump$|\.sql\.gz$')
+if [ -n "$dumps" ]; then
+  echo "pre-commit: refusing to commit a database dump."
+  printf '%s\n' "$dumps" | while read -r f; do say "$f"; done
+  fail=1
+fi
+
+# Statement formats. A migration under drizzle/ is generated DDL, not a
+# statement, so .sql is only suspicious outside that directory.
+statements=$(printf '%s\n' "$staged" | grep -iE '\.(csv|ofx|qfx|qbo)$|\.sql$' | grep -v '^drizzle/')
+if [ -n "$statements" ]; then
+  echo "pre-commit: refusing to commit what looks like a bank statement."
+  printf '%s\n' "$statements" | while read -r f; do say "$f"; done
+  say "Test fixtures must be synthetic — see TESTING.md."
+  fail=1
+fi
+
+# --- Content that looks like it came off a real statement ----------------
+#
+# Scoped to prose and tests, where real data has actually leaked here before,
+# and kept narrow on purpose: a check that fires on ordinary work gets
+# disabled, and then it protects nothing.
+
+prose=$(printf '%s\n' "$staged" | grep -E '\.(md|ts|tsx)$' | grep -vE '^drizzle/|^docs/screenshots/')
+if [ -n "$prose" ]; then
+  added=$(git diff --cached -U0 -- $prose | grep '^+' | grep -v '^+++')
+
+  # A run of 8+ digits: account and reference numbers. Timestamps and hashes
+  # are excluded by requiring the run to stand alone.
+  digits=$(printf '%s\n' "$added" | grep -oE '(^|[^0-9A-Za-z_])[0-9]{8,}([^0-9A-Za-z_]|$)' | head -3)
+  if [ -n "$digits" ]; then
+    echo "pre-commit: a long number is being added — is it a real account or reference?"
+    printf '%s\n' "$digits" | while read -r d; do say "$d"; done
+    say "If it is synthetic, change a digit or add --no-verify."
+    fail=1
+  fi
+
+  # The masked-card shapes this repo has had to scrub before.
+  cards=$(printf '%s\n' "$added" | grep -oE '(\*{2,}|•{2,}|x{4,}|\.\.\.)[0-9]{4}' | head -3)
+  if [ -n "$cards" ]; then
+    echo "pre-commit: that looks like a card's last four."
+    printf '%s\n' "$cards" | while read -r c; do say "$c"; done
+    fail=1
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo
+  echo "Nothing was committed. Override with: git commit --no-verify"
+  exit 1
+fi
+
+exit 0

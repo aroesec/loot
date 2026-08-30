@@ -23,6 +23,21 @@ pnpm build
 CI runs those three, builds the Docker image, and applies every migration to a
 clean database. All of it has to pass.
 
+## Turn the commit guard on
+
+```sh
+git config core.hooksPath .githooks
+```
+
+It refuses a commit that stages an env file, a database dump, or a bank
+statement, and one that adds a card's last four or a long account number to
+prose or a test. Both of those have had to be cleaned out of this repository
+once already, and by then the damage is done: a secret has to be rotated and a
+statement line has to be rewritten out of every clone that pulled it.
+
+`git commit --no-verify` overrides it. That is deliberate — a guard you cannot
+get past is one people stop enabling.
+
 ## Read AGENTS.md first
 
 [AGENTS.md](AGENTS.md) holds the repo-wide conventions and the invariants

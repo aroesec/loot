@@ -267,7 +267,8 @@ is set. That path must keep working: it is how most people will first run this.
   up on a form that makes it look authoritative.
 - Cache financial pages in the service worker. It would serve a stale balance
   after logout.
-- Commit anything from `.env.local`, `backups/`, or `.vercel/`.
+- Commit anything from `.env.local`, `backups/`, or `.vercel/`. `git config
+  core.hooksPath .githooks` makes the repository refuse to.
 - Put real statement data in a test fixture, a comment, or a commit message.
   Reference numbers, card last-fours, employer names and salary figures have all
   had to be scrubbed out of this repo once already.
