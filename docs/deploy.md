@@ -92,6 +92,29 @@ Note that `vercel env pull` returns `[SENSITIVE]` rather than the value for
 variables marked sensitive, so they cannot be round-tripped back out. Keep them
 in a password manager.
 
+### Develop against a branch, not production
+
+Neon branches are copy-on-write, so a development branch is a full copy of the
+ledger that costs nothing and can be wrecked freely:
+
+```sh
+npx neonctl branches create --project-id <project> --name dev
+npx neonctl connection-string dev --project-id <project> --pooled
+```
+
+Put that in `.env.local` and leave production's `DATABASE_URL` in Vercel only.
+It matters more here than in most projects: `db:migrate`, `db:seed`,
+`db:reclassify` and `db:reconcile-debt` all run from a developer machine
+against whatever `.env.local` names, so pointing it at production means every
+local experiment edits the real ledger. Reset the branch when it drifts:
+
+```sh
+npx neonctl branches reset dev --parent --project-id <project>
+```
+
+Quote the connection string in `.env.local`. It contains `&`, and an unquoted
+value breaks every script that sources the file.
+
 ### Only `main` deploys
 
 `vercel.json` disables automatic deployments for every branch except `main`.
