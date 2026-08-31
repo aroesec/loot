@@ -107,11 +107,11 @@ describe("transfer flag", () => {
   it("does not queue rows a rule can already answer", () => {
     // Queueing is for descriptions that cannot answer the question, not for
     // everything a seed happens to match.
-    expect(classify("STARBUCKS STORE 13938 CONIFER CO", -500).queueForReview).toBe(
+    expect(classify("STARBUCKS STORE 12345 SPRINGFIELD CO", -500).queueForReview).toBe(
       false,
     );
     expect(
-      classify("Zelle payment from MATTHEW DEPAOLA TDP0K8I9LAT9", 6_000)
+      classify("Zelle payment from ALEX RIVERA ZP0000000001", 6_000)
         .queueForReview,
     ).toBe(false);
   });
@@ -119,7 +119,7 @@ describe("transfer flag", () => {
   it("still excludes a move between the person's own accounts", () => {
     const result = classify(
       "Online Transfer to CHK ...1234 transaction#: 30000000002 08/03",
-      -451_811,
+      -450_000,
     );
     expect(result.isTransfer).toBe(true);
     expect(result.slug).toBe(TRANSFER);
@@ -152,7 +152,7 @@ describe("credit card payments", () => {
       "Payment to Chase card ending in 4321 08/21",
       "CAPITAL ONE      MOBILE PMT CA0AAAA10000001 WEB ID: 20000000003",
     ]) {
-      const result = classify(description, -209_904);
+      const result = classify(description, -210_000);
       expect(result.slug, description).toBe("card-payment");
       expect(result.isTransfer, description).toBe(true);
     }
@@ -164,7 +164,7 @@ describe("credit card payments", () => {
       "AUTOPAY PAYMENT - THANK YOU",
       "ONLINE PAYMENT FROM CHK 1234",
     ]) {
-      const result = classify(description, 209_904);
+      const result = classify(description, 210_000);
       expect(result.slug, description).toBe("card-payment");
       // Positive and flagged: it must not surface as income either.
       expect(result.isTransfer, description).toBe(true);
@@ -173,11 +173,11 @@ describe("credit card payments", () => {
 
   it("still counts what was actually charged to the card", () => {
     // A purchase is a purchase whichever account it landed on.
-    expect(classify("STARBUCKS STORE 13938 CONIFER CO", -500)).toMatchObject({
+    expect(classify("STARBUCKS STORE 12345 SPRINGFIELD CO", -500)).toMatchObject({
       slug: "coffee",
       isTransfer: false,
     });
-    expect(classify("KING SOOPERS #0087 CONIFER CO", -17_284)).toMatchObject({
+    expect(classify("KING SOOPERS #1234 SPRINGFIELD CO", -17_000)).toMatchObject({
       slug: "groceries",
       isTransfer: false,
     });
@@ -225,7 +225,7 @@ describe("income is never swallowed", () => {
 
     const outbound = classify(
       "CAPITAL ONE      MOBILE PMT CA0AAAA10000001",
-      -143_031,
+      -143_000,
     );
     expect(outbound.isTransfer).toBe(true);
   });
@@ -233,8 +233,8 @@ describe("income is never swallowed", () => {
   it("counts payroll and reimbursements", () => {
     for (const [description, amount] of [
       ["ACME CORP   PAYROLL                    PPD ID: 20000000004", 500_000],
-      ["GUSTO            PAYROLL", 195_308],
-      ["Zelle payment from MATTHEW DEPAOLA TDP0K8I9LAT9", 6_000],
+      ["GUSTO            PAYROLL", 195_000],
+      ["Zelle payment from ALEX RIVERA ZP0000000001", 6_000],
       ["VENMO            CASHOUT", 13_500],
     ] as const) {
       expect(classify(description, amount).isTransfer, description).toBe(false);
@@ -270,7 +270,7 @@ describe("direction-scoped rules", () => {
   });
 
   it("reads an incoming person-to-person payment as a reimbursement", () => {
-    expect(classify("Zelle payment from MATTHEW DEPAOLA TDP0K8I9LAT9", 6_000).slug).toBe(
+    expect(classify("Zelle payment from ALEX RIVERA ZP0000000001", 6_000).slug).toBe(
       "refunds",
     );
     expect(classify("VENMO  CASHOUT  PPD ID: 20000000005", 13_500).slug).toBe("refunds");
@@ -286,7 +286,7 @@ describe("pattern collisions", () => {
   it("does not read MOBILE PMT as a gas station", () => {
     const result = classify(
       "CAPITAL ONE      MOBILE PMT CA0AAAA10000001 WEB ID: 20000000003",
-      -143_031,
+      -143_000,
     );
     expect(result.slug).toBe("card-payment");
     expect(result.slug).not.toBe("gas-fuel");
