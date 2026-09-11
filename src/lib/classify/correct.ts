@@ -30,6 +30,8 @@ export async function applyCorrection(input: {
   const [row] = await db
     .select({
       rawDescription: transactions.rawDescription,
+      categoryId: transactions.categoryId,
+      fundId: transactions.fundId,
       merchant: transactions.merchant,
       amountCents: transactions.amountCents,
     })
@@ -57,6 +59,7 @@ export async function applyCorrection(input: {
     .update(transactions)
     .set({
       categoryId: input.categoryId,
+      fundId: row.categoryId === input.categoryId ? row.fundId : null,
       isTransfer,
       classificationSource: "manual",
       classificationConfidence: 1,

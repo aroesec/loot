@@ -534,6 +534,18 @@ export type ParseUsage = {
   ms: number;
 };
 
+// Fund transfers are identified on one funding account so importing both sides
+// never doubles the contribution. The optional destination enables pairing.
+export const funds = pgTable("funds", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  kind: text("kind").$type<"savings" | "investment">().notNull(),
+  fundingAccountId: uuid("funding_account_id").notNull().references(() => accounts.id),
+  destinationAccountId: uuid("destination_account_id").references(() => accounts.id),
+  patterns: jsonb("patterns").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---------------------------------------------------------------------------
 // Transactions — the ledger itself
 // ---------------------------------------------------------------------------
@@ -545,6 +557,7 @@ export const transactions = pgTable(
     accountId: uuid("account_id").references(() => accounts.id, {
       onDelete: "set null",
     }),
+    fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
     statementId: uuid("statement_id").references(() => statements.id, {
       onDelete: "set null",
     }),

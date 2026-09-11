@@ -1,3 +1,4 @@
+import { fundSummary, fundSummaryBetween } from "./funds";
 import { and, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, categories, transactions } from "@/db/schema";
@@ -88,6 +89,9 @@ export async function recentFlows(
         and(gte(transactions.postedOn, start), lte(transactions.postedOn, end)),
       );
 
+    const fundFlows = await fundSummary(month);
+    const contributed = fundFlows.byFund.reduce((sum, f) => sum + f.contributedCents, 0);
+    const withdrawn = fundFlows.byFund.reduce((sum, f) => sum + f.withdrawnCents, 0);
     const earnedCents = Number(row?.earned ?? 0);
     const consumptionCents = Number(row?.consumption ?? 0);
     if (earnedCents === 0 && consumptionCents === 0) continue;
@@ -96,8 +100,8 @@ export async function recentFlows(
       month,
       earnedCents,
       consumptionCents,
-      savedCents: Number(row?.saved ?? 0),
-      withdrawnCents: Number(row?.withdrawn ?? 0),
+      savedCents: Number(row?.saved ?? 0) + contributed,
+      withdrawnCents: Number(row?.withdrawn ?? 0) + withdrawn,
       netCents: earnedCents - consumptionCents,
     });
   }
@@ -347,8 +351,9 @@ export async function savingsChurn(
       and(gte(transactions.postedOn, start), lte(transactions.postedOn, end)),
     );
 
-  const savedCents = Number(row?.saved ?? 0);
-  const withdrawnCents = Number(row?.withdrawn ?? 0);
+  const fundFlows = await fundSummaryBetween(start, end);
+  const savedCents = Number(row?.saved ?? 0) + fundFlows.byFund.reduce((sum, f) => sum + f.contributedCents, 0);
+  const withdrawnCents = Number(row?.withdrawn ?? 0) + fundFlows.byFund.reduce((sum, f) => sum + f.withdrawnCents, 0);
   if (withdrawnCents === 0) return null;
 
   return {

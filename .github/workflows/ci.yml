@@ -145,3 +145,6 @@ jobs:
         run: |
           pnpm tsx src/db/seed.ts
           pnpm tsx src/db/seed.ts
+
+      - name: Fund transfer integration
+        run: pnpm tsx test/integration/funds.ts

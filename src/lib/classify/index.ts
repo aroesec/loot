@@ -1,3 +1,5 @@
+import { listFunds } from "@/lib/funds";
+import { matchFund } from "@/lib/funds/logic";
 import { eq, inArray, isNull, or, and, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { transactions, categories, accounts } from "@/db/schema";
@@ -63,7 +65,7 @@ async function loadCategoryOptions(): Promise<{
   );
 
   const options: CategoryOption[] = rows
-    .filter((r) => !parentIds.has(r.id))
+    .filter((r) => !parentIds.has(r.id) && !["fund-savings", "fund-investment"].includes(r.slug))
     .map((r) => ({
       slug: r.slug,
       name: r.name,
@@ -118,6 +120,7 @@ export async function classifyTransactions(
       postedOn: transactions.postedOn,
       amountCents: transactions.amountCents,
       accountKind: accounts.kind,
+      accountId: transactions.accountId,
       classificationSource: transactions.classificationSource,
     })
     .from(transactions)
@@ -137,10 +140,15 @@ export async function classifyTransactions(
   ]);
 
   // --- Pass 1: rules -------------------------------------------------------
+  const configuredFunds = mode === "personal" ? await listFunds() : [];
   const unmatched: ClassifiableTransaction[] = [];
   const hitRuleIds: string[] = [];
 
   for (const row of pending) {
+    if (matchFund(row, configuredFunds)) {
+      report.byRule += 1;
+      continue; // Applied together with any imported counterpart below.
+    }
     const normalized = normalizeDescription(row.rawDescription);
     const match = matchRule(normalized, rules, row.amountCents);
 
@@ -302,6 +310,8 @@ export async function classifyTransactions(
     report.unclassified = leftovers.length;
   }
 
+  const { refreshFundClassifications } = await import("@/lib/funds");
+  await refreshFundClassifications();
   report.ms = Date.now() - started;
   return report;
 }

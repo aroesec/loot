@@ -1,3 +1,4 @@
+import { fundSummary } from "@/lib/funds";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
@@ -108,7 +109,9 @@ export default async function OverviewPage({
   const bounds = monthBounds(month);
   // A business has no savings rate and a person has no net margin. Showing
   // the wrong word invites reading a number that does not mean what it says.
-  const words = vocabulary(await ledgerMode());
+  const mode = await ledgerMode();
+  const words = vocabulary(mode);
+  const fundTotals = mode === "personal" ? await fundSummary(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
   // who does not already suspect it.
@@ -167,6 +170,26 @@ export default async function OverviewPage({
           }
         />
       </div>
+
+      {fundTotals && <Card className="mt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg">Savings &amp; investments</h2>
+          <Link href="/settings#funds" className="btn">Manage funds</Link>
+        </div>
+        {fundTotals.byFund.length === 0 ? <p className="mt-3 text-sm text-[var(--color-ink-muted)]">Add your funds in Settings to track contributions separately from expenses.</p> : <>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Stat label="Net savings contributions" value={formatCents(fundTotals.savingsCents)} />
+            <Stat label="Net investment contributions" value={formatCents(fundTotals.investmentCents)} />
+            <Stat label="Left after contributions" value={formatCents(summary.netCents - fundTotals.netCents)} detail="Income minus spending and net fund contributions; not an account balance." />
+          </div>
+          <div className="mt-4 space-y-3">
+            {fundTotals.byFund.map((f) => <div key={f.id} className="flex flex-wrap justify-between gap-2 border-t border-[var(--color-border)] pt-3 text-sm">
+              <span>{f.name} <span className="text-[var(--color-ink-muted)]">· {f.kind === "savings" ? "Savings" : "Investment"}</span></span>
+              <span>Contributed {formatCents(f.contributedCents)} · Withdrawn {formatCents(f.withdrawnCents)}</span>
+            </div>)}
+          </div>
+        </>}
+      </Card>}
 
       {unreconciled.length > 0 ? (
         <Card className="mt-4 border-[var(--color-warning)] bg-[var(--color-warning-soft)]">

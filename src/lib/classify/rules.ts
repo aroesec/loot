@@ -294,6 +294,8 @@ export async function reapplyAllRules(): Promise<{
     updated += 1;
   }
 
+  const { refreshFundClassifications } = await import("@/lib/funds");
+  await refreshFundClassifications();
   return { scanned: rows.length, updated };
 }
 

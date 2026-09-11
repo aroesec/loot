@@ -6,6 +6,7 @@ import {
   budgets,
   categories,
   goals,
+  funds,
   merchantRules,
   mileageTrips,
   people,
@@ -55,6 +56,7 @@ export type ExportBundle = {
   people: unknown[];
   mileageTrips: unknown[];
   accountBalances: unknown[];
+  funds: unknown[];
 };
 
 /**
@@ -123,7 +125,7 @@ export async function transactionsCsv(): Promise<string> {
 
 /** Everything the person created, in a shape another deployment can read. */
 export async function exportBundle(): Promise<ExportBundle> {
-  const [acct, cats, txns, rules, budg, gls, series, ppl, miles, balances] = await Promise.all([
+  const [acct, cats, txns, rules, budg, gls, series, ppl, miles, balances, fundRows] = await Promise.all([
     db.select().from(accounts),
     db.select().from(categories),
     db.select().from(transactions).orderBy(asc(transactions.postedOn)),
@@ -138,6 +140,7 @@ export async function exportBundle(): Promise<ExportBundle> {
     // Not reconstructable: Plaid does not hand back history, so an export
     // without this loses the net worth line permanently.
     db.select().from(accountBalances).orderBy(asc(accountBalances.capturedOn)),
+    db.select().from(funds).orderBy(asc(funds.name)),
   ]);
 
   /*
@@ -158,10 +161,10 @@ export async function exportBundle(): Promise<ExportBundle> {
   return {
     exportedAt: new Date().toISOString(),
     application: "loot",
-    // 2 added `people`, 3 `mileageTrips`, 4 `accountBalances`. Only ever grows
+    // 2 added `people`, 3 `mileageTrips`, 4 `accountBalances`, 5 `funds`. Only grows
     // by adding keys, so a reader written against an older version still finds
     // everything it knew about.
-    formatVersion: 4,
+    formatVersion: 5,
     counts: {
       accounts: acct.length,
       categories: cats.length,
@@ -173,6 +176,7 @@ export async function exportBundle(): Promise<ExportBundle> {
       people: ppl.length,
       mileageTrips: miles.length,
       accountBalances: balances.length,
+      funds: fundRows.length,
     },
     accounts: plain(acct),
     categories: plain(cats),
@@ -184,5 +188,6 @@ export async function exportBundle(): Promise<ExportBundle> {
     people: plain(ppl),
     mileageTrips: plain(miles),
     accountBalances: plain(balances),
+    funds: plain(fundRows),
   };
 }
