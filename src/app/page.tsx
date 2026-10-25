@@ -1,3 +1,4 @@
+import { budgetPlanning } from "@/lib/planning";
 import { incomeProjection, listIncomePlans } from "@/lib/income";
 import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
 import { IncomeSummary } from "@/components/income-summary";
@@ -103,8 +104,7 @@ export default async function OverviewPage({
   }
 
   const needsReview = Number(reviewCount[0]?.count ?? 0);
-  const subCount = Number(activeSubs[0]?.count ?? 0);
-  const subAnnual = Number(activeSubs[0]?.annual ?? 0);
+
   const prior = months.indexOf(month) + 1;
   const priorMonth = months[prior] ?? shiftMonth(month, -1);
   const priorSummary = await monthSummary(priorMonth);
@@ -117,6 +117,9 @@ export default async function OverviewPage({
   // the wrong word invites reading a number that does not mean what it says.
   const words = vocabulary(mode);
   const projection = mode === "personal" ? await incomeProjection(month) : null;
+  const spendingPlan = mode === "personal" ? await budgetPlanning(month) : null;
+  const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
+  const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
   const fundTotals = mode === "personal" ? await fundSummary(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
@@ -138,7 +141,7 @@ export default async function OverviewPage({
         }
       />
 
-      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={fundTotals?.netCents ?? 0} />}
+      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={fundTotals?.netCents ?? 0} plannedSpendCents={spendingPlan?.forecastCents} />}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
@@ -283,15 +286,14 @@ export default async function OverviewPage({
             <h2 className="mb-3 text-lg">Recurring</h2>
             {subCount === 0 ? (
               <p className="text-sm text-[var(--color-ink-muted)]">
-                No subscriptions detected yet. Three or more regular charges
-                from the same merchant will show up here.
+                No recurring bills approved yet. <Link href="/recurring" className="underline">Review suggestions</Link> before including them in your forecast.
               </p>
             ) : (
               <>
                 <p className="figure text-2xl">{formatCents(subAnnual)}</p>
                 <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                  a year across {subCount} active{" "}
-                  {subCount === 1 ? "subscription" : "subscriptions"}
+                  a year across {subCount} approved{" "}
+                  {subCount === 1 ? "bill" : "bills"}
                 </p>
                 <Link
                   href="/recurring"

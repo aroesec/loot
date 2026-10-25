@@ -154,3 +154,6 @@ jobs:
 
       - name: Business income to savings integration
         run: pnpm tsx test/integration/business-income.ts
+
+      - name: Expense approval and budget integration
+        run: pnpm tsx test/integration/planning.ts

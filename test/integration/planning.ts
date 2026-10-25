@@ -1,0 +1,148 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import {
+  accounts,
+  budgets,
+  categories,
+  expensePlans,
+  transactions,
+} from "@/db/schema";
+import {
+  expensePlanning,
+  budgetPlanning,
+  saveCategoryBudget,
+  saveExpensePlan,
+} from "@/lib/planning";
+if (
+  !["localhost", "127.0.0.1"].includes(
+    new URL(process.env.DATABASE_URL ?? "http://invalid").hostname,
+  )
+)
+  throw new Error("Use a disposable local database.");
+const accountId = randomUUID(),
+  categoryId = randomUUID();
+async function run() {
+  await db
+    .insert(accounts)
+    .values({ id: accountId, name: "Test bills", kind: "checking" });
+  await db
+    .insert(categories)
+    .values({
+      id: categoryId,
+      name: "Test phone",
+      slug: `test-phone-${categoryId}`,
+      kind: "expense",
+      mode: "personal",
+      budgetable: true,
+    });
+  await db
+    .insert(transactions)
+    .values(
+      ["2096-08-15", "2096-09-15"].map((postedOn) => ({
+        accountId,
+        categoryId,
+        merchant: "Test phone company",
+        rawDescription: "Test phone bill",
+        amountCents: -9000,
+        postedOn,
+        status: "cleared" as const,
+        dedupeHash: randomUUID(),
+      })),
+    );
+  assert.equal((await expensePlanning("2096-10")).suggestions.length, 1);
+  assert.equal((await expensePlanning("2096-10")).approved.length, 0);
+  const plan = {
+    accountId,
+    categoryId,
+    merchant: "Test phone company",
+    name: "Phone",
+    amountCents: 9500,
+    effectiveMonth: "2096-10",
+    enabled: true,
+  };
+  await saveExpensePlan(plan);
+  await saveExpensePlan(plan);
+  assert.equal((await expensePlanning("2096-10")).approved.length, 1);
+  await saveCategoryBudget({
+    categoryId,
+    month: "2096-10",
+    amountCents: 12000,
+    rollover: "none",
+  });
+  assert.equal(
+    (await budgetPlanning("2096-10")).forecastCents,
+    12000,
+    "bill is inside budget",
+  );
+  await saveCategoryBudget({
+    categoryId,
+    month: "2096-12",
+    amountCents: 14000,
+    rollover: "none",
+  });
+  await saveCategoryBudget({
+    categoryId,
+    month: "2096-11",
+    amountCents: 13000,
+    rollover: "none",
+  });
+  assert.equal((await budgetPlanning("2096-10")).budgetCents, 12000);
+  assert.equal((await budgetPlanning("2096-11")).budgetCents, 13000);
+  assert.equal((await budgetPlanning("2096-12")).budgetCents, 14000);
+  await saveCategoryBudget({
+    categoryId,
+    month: "2096-11",
+    amountCents: 0,
+    rollover: "none",
+  });
+  assert.equal(
+    (await budgetPlanning("2096-11")).budgetCents,
+    0,
+    "removal must not resurrect previous version",
+  );
+  assert.equal((await budgetPlanning("2096-12")).budgetCents, 14000);
+  await db
+    .insert(transactions)
+    .values({
+      accountId,
+      categoryId,
+      merchant: plan.merchant,
+      rawDescription: "Test phone bill",
+      amountCents: -8500,
+      postedOn: "2096-10-15",
+      dedupeHash: randomUUID(),
+    });
+  assert.equal(
+    (await expensePlanning("2096-10")).approved[0]?.remainingCents,
+    0,
+  );
+  await saveExpensePlan({ ...plan, effectiveMonth: "2096-11", enabled: false });
+  assert.equal((await expensePlanning("2096-10")).approved.length, 1);
+  assert.equal((await expensePlanning("2096-11")).approved.length, 0);
+  await assert.rejects(
+    saveCategoryBudget({
+      categoryId: randomUUID(),
+      month: "2096-10",
+      amountCents: 5000,
+      rollover: "none",
+    }),
+  );
+  console.log(
+    "PASS: approval required, retries, bill-budget overlap, out-of-order month edits, clearing budgets, recorded bill replacement, historical approvals, invalid categories.",
+  );
+}
+run()
+  .finally(async () => {
+    await db.delete(expensePlans).where(eq(expensePlans.accountId, accountId));
+    await db.delete(transactions).where(eq(transactions.accountId, accountId));
+    await db.delete(budgets).where(eq(budgets.categoryId, categoryId));
+    await db.delete(categories).where(eq(categories.id, categoryId));
+    await db.delete(accounts).where(eq(accounts.id, accountId));
+  })
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

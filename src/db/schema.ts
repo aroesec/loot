@@ -1030,3 +1030,17 @@ export const incomePlans = pgTable("income_plans", {
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("income_plans_source_month_key").on(t.sourceId, t.effectiveMonth)]);
+
+/** Explicitly approved monthly bills; automatic detection never writes here. */
+export const expensePlans = pgTable("expense_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceKey: text("source_key").notNull(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id),
+  categoryId: uuid("category_id").notNull().references(() => categories.id),
+  merchant: text("merchant").notNull(),
+  name: text("name").notNull(),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  effectiveMonth: text("effective_month").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex("expense_plans_source_month_key").on(t.sourceKey, t.effectiveMonth)]);
