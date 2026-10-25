@@ -1016,3 +1016,17 @@ export type Settings = typeof settings.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
 export type MileageTrip = typeof mileageTrips.$inferSelect;
+
+/** Month-effective revisions preserve earlier income expectations. */
+export const incomePlans = pgTable("income_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceId: uuid("source_id").notNull(),
+  name: text("name").notNull(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id),
+  pattern: text("pattern").notNull(),
+  effectiveMonth: text("effective_month").notNull(),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  paymentsPerMonth: integer("payments_per_month").notNull().default(2),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("income_plans_source_month_key").on(t.sourceId, t.effectiveMonth)]);

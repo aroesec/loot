@@ -148,3 +148,6 @@ jobs:
 
       - name: Fund transfer integration
         run: pnpm tsx test/integration/funds.ts
+
+      - name: Monthly income integration
+        run: pnpm tsx test/integration/income.ts

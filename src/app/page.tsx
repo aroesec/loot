@@ -1,3 +1,6 @@
+import { incomeProjection, listIncomePlans } from "@/lib/income";
+import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
+import { IncomeSummary } from "@/components/income-summary";
 import { fundSummary } from "@/lib/funds";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -42,8 +45,11 @@ export default async function OverviewPage({
   if ((await onboardingState()).needed) redirect("/welcome");
 
   const params = await searchParams;
+  const mode = await ledgerMode();
+  const hasCurrentPlan = mode === "personal" && activeIncomePlans({ month: currentMonth(), plans: await listIncomePlans() }).length > 0;
   const months = await availableMonths();
-  const month = params.month ?? months[0] ?? currentMonth();
+  if (hasCurrentPlan && !months.includes(currentMonth())) months.unshift(currentMonth());
+  const month = incomeMonth.safeParse(params.month).success ? params.month! : hasCurrentPlan ? currentMonth() : months[0] ?? currentMonth();
 
   const [summary, budgets, trends, reviewCount, activeSubs, recent] =
     await Promise.all([
@@ -109,8 +115,8 @@ export default async function OverviewPage({
   const bounds = monthBounds(month);
   // A business has no savings rate and a person has no net margin. Showing
   // the wrong word invites reading a number that does not mean what it says.
-  const mode = await ledgerMode();
   const words = vocabulary(mode);
+  const projection = mode === "personal" ? await incomeProjection(month) : null;
   const fundTotals = mode === "personal" ? await fundSummary(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
@@ -131,6 +137,8 @@ export default async function OverviewPage({
           />
         }
       />
+
+      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={fundTotals?.netCents ?? 0} />}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
