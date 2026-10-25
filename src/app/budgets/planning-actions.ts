@@ -103,3 +103,36 @@ export async function populateAction(
     };
   }
 }
+
+export async function fundScheduleAction(
+  _state: PlanningState,
+  form: FormData,
+): Promise<PlanningState> {
+  if (!(await isAuthenticated()))
+    return { error: "Your session expired. Sign in again." };
+  const { fundScheduleInput } = await import("@/lib/planning/fund-schedule");
+  const value = fundScheduleInput.safeParse({
+    fundId: form.get("fundId"),
+    effectiveMonth: form.get("month"),
+    amountCents: cents(form),
+    weekday: Number(form.get("weekday")),
+    enabled: form.get("enabled") === "on",
+  });
+  if (!value.success)
+    return { error: "Enter a positive weekly amount and choose a weekday." };
+  try {
+    const { saveFundSchedule } = await import("@/lib/planning");
+    await saveFundSchedule(value.data);
+    revalidatePath("/", "layout");
+    return {
+      message: "Weekly schedule saved. Bank transfers are not changed.",
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof PlanningError
+          ? error.message
+          : "Could not save the schedule. Try again.",
+    };
+  }
+}

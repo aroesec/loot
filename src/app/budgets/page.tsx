@@ -72,6 +72,7 @@ export default async function BudgetsPage({
         />
       </div>
       <AllocationSummary
+        month={month}
         incomeCents={income.projectedIncomeCents}
         expensesCents={plan.forecastCents}
         funds={funds}

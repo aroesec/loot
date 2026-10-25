@@ -1044,3 +1044,13 @@ export const expensePlans = pgTable("expense_plans", {
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, t => [uniqueIndex("expense_plans_source_month_key").on(t.sourceKey, t.effectiveMonth)]);
+
+// Month-effective schedules leave past forecasts intact when a plan changes.
+export const fundSchedules = pgTable("fund_schedules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fundId: uuid("fund_id").notNull().references(() => funds.id, { onDelete: "cascade" }),
+  effectiveMonth: text("effective_month").notNull(),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  weekday: integer("weekday").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+}, (table) => [uniqueIndex("fund_schedules_fund_month_idx").on(table.fundId, table.effectiveMonth)]);

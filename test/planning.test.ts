@@ -1,3 +1,4 @@
+import { weeklyFundForecast } from "@/lib/planning/fund-schedule";
 import { describe, it, expect } from "vitest";
 import {
   fundForecast,
@@ -190,5 +191,55 @@ describe("savings and investment cash allocation", () => {
         forecastCents: -5000,
       });
     }
+  });
+});
+
+describe("weekly fund plans", () => {
+  const schedule = {
+    fundId: "test-fund",
+    effectiveMonth: "2026-10",
+    amountCents: 20000,
+    weekday: 2,
+    enabled: true,
+  };
+  it("keeps weekly transfers reserved despite a large one-off deposit and matches a delayed posting once", () => {
+    const rows = [6, 14, 20].map((day) => ({
+      id: String(day),
+      postedOn: `2026-10-${String(day).padStart(2, "0")}`,
+      amountCents: -20000,
+    }));
+    const result = weeklyFundForecast({
+      month: "2026-10",
+      schedule,
+      contributedCents: 160000,
+      withdrawnCents: 10000,
+      rows: [
+        ...rows,
+        rows[0]!,
+        { id: "extra", postedOn: "2026-10-16", amountCents: -100000 },
+      ],
+    });
+    expect(result.remainingCents).toBe(20000);
+    expect(result.forecastCents).toBe(170000);
+  });
+  it("counts five-week months and stops reserving when paused", () => {
+    expect(
+      weeklyFundForecast({
+        month: "2026-12",
+        schedule,
+        contributedCents: 0,
+        withdrawnCents: 0,
+        rows: [],
+      }).remainingCents,
+    ).toBe(100000);
+    expect(
+      weeklyFundForecast({
+        month: "2026-12",
+        schedule: { ...schedule, enabled: false },
+        contributedCents: 20000,
+        withdrawnCents: 0,
+        rows: [],
+      }).forecastCents,
+    ).toBe(20000);
   });
 });

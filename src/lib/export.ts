@@ -9,6 +9,7 @@ import {
   funds,
   incomePlans,
   expensePlans,
+  fundSchedules,
   merchantRules,
   mileageTrips,
   people,
@@ -61,6 +62,7 @@ export type ExportBundle = {
   funds: unknown[];
   incomePlans: unknown[];
   expensePlans: unknown[];
+  fundSchedules: unknown[];
 };
 
 /**
@@ -129,7 +131,22 @@ export async function transactionsCsv(): Promise<string> {
 
 /** Everything the person created, in a shape another deployment can read. */
 export async function exportBundle(): Promise<ExportBundle> {
-  const [acct, cats, txns, rules, budg, gls, series, ppl, miles, balances, fundRows, incomeRows, expenseRows] = await Promise.all([
+  const [
+    acct,
+    cats,
+    txns,
+    rules,
+    budg,
+    gls,
+    series,
+    ppl,
+    miles,
+    balances,
+    fundRows,
+    incomeRows,
+    expenseRows,
+    scheduleRows,
+  ] = await Promise.all([
     db.select().from(accounts),
     db.select().from(categories),
     db.select().from(transactions).orderBy(asc(transactions.postedOn)),
@@ -147,6 +164,7 @@ export async function exportBundle(): Promise<ExportBundle> {
     db.select().from(funds).orderBy(asc(funds.name)),
     db.select().from(incomePlans),
     db.select().from(expensePlans),
+    db.select().from(fundSchedules),
   ]);
 
   /*
@@ -159,7 +177,11 @@ export async function exportBundle(): Promise<ExportBundle> {
       Object.fromEntries(
         Object.entries(row as Record<string, unknown>).map(([k, v]) => [
           k,
-          typeof v === "bigint" ? v.toString() : v instanceof Date ? v.toISOString() : v,
+          typeof v === "bigint"
+            ? v.toString()
+            : v instanceof Date
+              ? v.toISOString()
+              : v,
         ]),
       ),
     );
@@ -167,10 +189,10 @@ export async function exportBundle(): Promise<ExportBundle> {
   return {
     exportedAt: new Date().toISOString(),
     application: "loot",
-    // 2 added `people`, 3 `mileageTrips`, 4 `accountBalances`, 5 `funds`, 6 `incomePlans`, 7 `expensePlans`. Only grows
+    // 2 added `people`, 3 `mileageTrips`, 4 `accountBalances`, 5 `funds`, 6 `incomePlans`, 7 `expensePlans`, 8 `fundSchedules`. Only grows
     // by adding keys, so a reader written against an older version still finds
     // everything it knew about.
-    formatVersion: 7,
+    formatVersion: 8,
     counts: {
       accounts: acct.length,
       categories: cats.length,
@@ -185,6 +207,7 @@ export async function exportBundle(): Promise<ExportBundle> {
       funds: fundRows.length,
       incomePlans: incomeRows.length,
       expensePlans: expenseRows.length,
+      fundSchedules: scheduleRows.length,
     },
     accounts: plain(acct),
     categories: plain(cats),
@@ -199,5 +222,6 @@ export async function exportBundle(): Promise<ExportBundle> {
     funds: plain(fundRows),
     incomePlans: plain(incomeRows),
     expensePlans: plain(expenseRows),
+    fundSchedules: plain(scheduleRows),
   };
 }

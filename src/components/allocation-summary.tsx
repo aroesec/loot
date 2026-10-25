@@ -1,3 +1,4 @@
+import { FundScheduleForm } from "@/components/fund-schedule-form";
 import { Card, Stat } from "@/components/ui";
 import { formatCents } from "@/lib/money";
 import type { allocationPlanning } from "@/lib/planning";
@@ -5,7 +6,9 @@ export function AllocationSummary({
   incomeCents,
   expensesCents,
   funds,
+  month,
 }: {
+  month: string;
   incomeCents: number | null;
   expensesCents: number;
   funds: Awaited<ReturnType<typeof allocationPlanning>>;
@@ -39,18 +42,23 @@ export function AllocationSummary({
       {funds.byFund.length > 0 && (
         <ul className="mt-4 divide-y divide-[var(--color-border)]">
           {funds.byFund.map((fund) => (
-            <li
-              key={fund.id}
-              className="flex flex-wrap justify-between gap-2 py-3 text-sm"
-            >
-              <span>
-                {fund.name} ·{" "}
-                {fund.kind === "savings" ? "Savings" : "Investments"}
-              </span>
-              <span className="figure">
-                {formatCents(fund.recordedCents)} recorded +{" "}
-                {formatCents(fund.remainingCents)} still planned
-              </span>
+            <li key={fund.id} className="py-3 text-sm">
+              <div className="flex flex-wrap justify-between gap-2">
+                <span>
+                  {fund.name} ·{" "}
+                  {fund.kind === "savings" ? "Savings" : "Investments"}
+                </span>
+                <span className="figure">
+                  {formatCents(fund.recordedCents)} recorded +{" "}
+                  {formatCents(fund.remainingCents)} still planned
+                </span>
+              </div>
+              <FundScheduleForm
+                fundId={fund.id}
+                name={fund.name}
+                month={month}
+                schedule={fund.schedule}
+              />
             </li>
           ))}
         </ul>
@@ -75,11 +83,11 @@ export function AllocationSummary({
         </p>
       )}
       <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-        Fund estimates use the last full month when contributions occurred in
-        both previous months within 50% of each other. Recorded transfers
-        replace the estimate. One-off or changed transfers and unbudgeted future
-        purchases are not predicted. This is a forecast, not cash currently
-        available.
+        Saved weekly schedules take priority. Otherwise, fund estimates use the
+        last full month when contributions occurred in both previous months
+        within 50% of each other. Recorded transfers replace the estimate.
+        One-off or changed transfers and unbudgeted future purchases are not
+        predicted. This is a forecast, not cash currently available.
       </p>
     </Card>
   );

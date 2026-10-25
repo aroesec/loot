@@ -144,7 +144,7 @@ export default async function OverviewPage({
       />
 
       {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={allocations?.forecastCents ?? 0} plannedSpendCents={spendingPlan?.forecastCents} />}
-      {projection && allocations && spendingPlan && <AllocationSummary incomeCents={projection.projectedIncomeCents} expensesCents={spendingPlan.forecastCents} funds={allocations} />}
+      {projection && allocations && spendingPlan && <AllocationSummary month={month} incomeCents={projection.projectedIncomeCents} expensesCents={spendingPlan.forecastCents} funds={allocations} />}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat

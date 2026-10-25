@@ -155,6 +155,13 @@
       "when": 1792968160746,
       "tag": "0021_living_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792970129856,
+      "tag": "0022_spooky_warhawk",
+      "breakpoints": true
     }
   ]
 }

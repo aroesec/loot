@@ -1,7 +1,14 @@
+import {
+  fundScheduleInput,
+  weeklyFundForecast,
+  type FundSchedule,
+} from "./fund-schedule";
 import { and, asc, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts,
+  funds,
+  fundSchedules,
   budgets,
   categories,
   expensePlans,
@@ -279,18 +286,57 @@ export async function allocationPlanning(month: string) {
     fundSummary(shiftMonth(month, -1)),
     fundSummary(shiftMonth(month, -2)),
   ]);
-  const byFund = current.byFund.map((fund) => ({
-    ...fund,
-    ...fundForecast({
-      contributedCents: fund.contributedCents,
-      withdrawnCents: fund.withdrawnCents,
-      previousCents:
-        previous.byFund.find((row) => row.id === fund.id)?.contributedCents ??
-        0,
-      earlierCents:
-        earlier.byFund.find((row) => row.id === fund.id)?.contributedCents ?? 0,
-    }),
-  }));
+  const schedules = await db
+    .select()
+    .from(fundSchedules)
+    .where(lte(fundSchedules.effectiveMonth, month))
+    .orderBy(asc(fundSchedules.effectiveMonth));
+  const active = new Map(schedules.map((row) => [row.fundId, row]));
+  const bounds = monthBounds(month);
+  const movements = await db
+    .select({
+      id: transactions.id,
+      fundId: transactions.fundId,
+      amountCents: transactions.amountCents,
+      postedOn: transactions.postedOn,
+    })
+    .from(transactions)
+    .innerJoin(
+      funds,
+      and(
+        eq(transactions.fundId, funds.id),
+        eq(transactions.accountId, funds.fundingAccountId),
+      ),
+    )
+    .where(
+      and(
+        eq(transactions.isTransfer, true),
+        gte(transactions.postedOn, bounds.start),
+        lte(transactions.postedOn, bounds.end),
+      ),
+    );
+  const byFund = current.byFund.map((fund) => {
+    const schedule = active.get(fund.id);
+    const forecast = schedule
+      ? weeklyFundForecast({
+          month,
+          schedule,
+          contributedCents: fund.contributedCents,
+          withdrawnCents: fund.withdrawnCents,
+          rows: movements.filter((row) => row.fundId === fund.id),
+        })
+      : fundForecast({
+          contributedCents: fund.contributedCents,
+          withdrawnCents: fund.withdrawnCents,
+          previousCents:
+            previous.byFund.find((row) => row.id === fund.id)
+              ?.contributedCents ?? 0,
+          earlierCents:
+            earlier.byFund.find((row) => row.id === fund.id)
+              ?.contributedCents ?? 0,
+        });
+    return { ...fund, ...forecast, schedule: schedule ?? null };
+  });
   return {
     byFund,
     savingsCents: byFund
@@ -303,4 +349,22 @@ export async function allocationPlanning(month: string) {
     recordedCents: current.netCents,
     forecastCents: byFund.reduce((sum, row) => sum + row.forecastCents, 0),
   };
+}
+
+export async function saveFundSchedule(input: FundSchedule) {
+  const value = fundScheduleInput.parse(input);
+  if ((await ledgerMode()) !== "personal")
+    throw new PlanningError("Fund schedules are available in personal mode.");
+  const [fund] = await db
+    .select()
+    .from(funds)
+    .where(eq(funds.id, value.fundId));
+  if (!fund) throw new PlanningError("Choose an existing fund.");
+  await db
+    .insert(fundSchedules)
+    .values(value)
+    .onConflictDoUpdate({
+      target: [fundSchedules.fundId, fundSchedules.effectiveMonth],
+      set: value,
+    });
 }

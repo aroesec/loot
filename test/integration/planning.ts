@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   accounts,
+  funds,
   budgets,
   categories,
   expensePlans,
@@ -11,6 +12,8 @@ import {
 } from "@/db/schema";
 import {
   populateRecurringBudgets,
+  saveFundSchedule,
+  allocationPlanning,
   expensePlanning,
   budgetPlanning,
   saveCategoryBudget,
@@ -23,7 +26,8 @@ if (
 )
   throw new Error("Use a disposable local database.");
 const accountId = randomUUID(),
-  categoryId = randomUUID();
+  categoryId = randomUUID(),
+  fundId = randomUUID();
 async function run() {
   await db
     .insert(accounts)
@@ -139,6 +143,59 @@ async function run() {
       rollover: "none",
     }),
   );
+  await db
+    .insert(funds)
+    .values({
+      id: fundId,
+      name: "Test savings",
+      kind: "savings",
+      fundingAccountId: accountId,
+      patterns: ["Test savings"],
+    });
+  await db
+    .insert(transactions)
+    .values(
+      [6, 14, 20].map((day) => ({
+        accountId,
+        fundId,
+        categoryId,
+        rawDescription: "Test savings transfer",
+        amountCents: -20000,
+        postedOn: `2026-10-${String(day).padStart(2, "0")}`,
+        isTransfer: true,
+        dedupeHash: randomUUID(),
+      })),
+    );
+  await db
+    .insert(transactions)
+    .values({
+      accountId,
+      fundId,
+      categoryId,
+      rawDescription: "Test extra savings",
+      amountCents: -100000,
+      postedOn: "2026-10-16",
+      isTransfer: true,
+      dedupeHash: randomUUID(),
+    });
+  const weekly = {
+    fundId,
+    effectiveMonth: "2026-10",
+    amountCents: 20000,
+    weekday: 2,
+    enabled: true,
+  };
+  await saveFundSchedule(weekly);
+  await saveFundSchedule(weekly);
+  assert.equal((await allocationPlanning("2026-10")).forecastCents, 180000);
+  assert.equal((await allocationPlanning("2026-10")).remainingCents, 20000);
+  await saveFundSchedule({
+    ...weekly,
+    effectiveMonth: "2026-11",
+    enabled: false,
+  });
+  assert.equal((await allocationPlanning("2026-10")).remainingCents, 20000);
+  assert.equal((await allocationPlanning("2026-11")).remainingCents, 0);
   console.log(
     "PASS: approval required, retries, bill-budget overlap, out-of-order month edits, clearing budgets, recorded bill replacement, historical approvals, invalid categories.",
   );
@@ -149,6 +206,7 @@ run()
     await db.delete(transactions).where(eq(transactions.accountId, accountId));
     await db.delete(budgets).where(eq(budgets.categoryId, categoryId));
     await db.delete(categories).where(eq(categories.id, categoryId));
+    await db.delete(funds).where(eq(funds.id, fundId));
     await db.delete(accounts).where(eq(accounts.id, accountId));
   })
   .then(() => process.exit(0))
