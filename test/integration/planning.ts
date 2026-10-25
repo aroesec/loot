@@ -10,6 +10,7 @@ import {
   transactions,
 } from "@/db/schema";
 import {
+  populateRecurringBudgets,
   expensePlanning,
   budgetPlanning,
   saveCategoryBudget,
@@ -27,32 +28,37 @@ async function run() {
   await db
     .insert(accounts)
     .values({ id: accountId, name: "Test bills", kind: "checking" });
-  await db
-    .insert(categories)
-    .values({
-      id: categoryId,
-      name: "Test phone",
-      slug: `test-phone-${categoryId}`,
-      kind: "expense",
-      mode: "personal",
-      budgetable: true,
-    });
-  await db
-    .insert(transactions)
-    .values(
-      ["2096-08-15", "2096-09-15"].map((postedOn) => ({
-        accountId,
-        categoryId,
-        merchant: "Test phone company",
-        rawDescription: "Test phone bill",
-        amountCents: -9000,
-        postedOn,
-        status: "cleared" as const,
-        dedupeHash: randomUUID(),
-      })),
-    );
+  await db.insert(categories).values({
+    id: categoryId,
+    name: "Test phone",
+    slug: `test-phone-${categoryId}`,
+    kind: "expense",
+    mode: "personal",
+    budgetable: true,
+  });
+  await db.insert(transactions).values(
+    ["2096-08-15", "2096-09-15"].map((postedOn) => ({
+      accountId,
+      categoryId,
+      merchant: "Test phone company",
+      rawDescription: "Test phone bill",
+      amountCents: -9000,
+      postedOn,
+      status: "cleared" as const,
+      dedupeHash: randomUUID(),
+    })),
+  );
   assert.equal((await expensePlanning("2096-10")).suggestions.length, 1);
   assert.equal((await expensePlanning("2096-10")).approved.length, 0);
+  assert.deepEqual(await populateRecurringBudgets("2096-10"), {
+    approved: 1,
+    created: 1,
+  });
+  assert.deepEqual(await populateRecurringBudgets("2096-10"), {
+    approved: 0,
+    created: 0,
+  });
+  assert.equal((await budgetPlanning("2096-10")).budgetCents, 9000);
   const plan = {
     accountId,
     categoryId,
@@ -102,18 +108,22 @@ async function run() {
     0,
     "removal must not resurrect previous version",
   );
+  await populateRecurringBudgets("2096-11");
+  assert.equal(
+    (await budgetPlanning("2096-11")).budgetCents,
+    0,
+    "autofill preserves an explicitly cleared budget",
+  );
   assert.equal((await budgetPlanning("2096-12")).budgetCents, 14000);
-  await db
-    .insert(transactions)
-    .values({
-      accountId,
-      categoryId,
-      merchant: plan.merchant,
-      rawDescription: "Test phone bill",
-      amountCents: -8500,
-      postedOn: "2096-10-15",
-      dedupeHash: randomUUID(),
-    });
+  await db.insert(transactions).values({
+    accountId,
+    categoryId,
+    merchant: plan.merchant,
+    rawDescription: "Test phone bill",
+    amountCents: -8500,
+    postedOn: "2096-10-15",
+    dedupeHash: randomUUID(),
+  });
   assert.equal(
     (await expensePlanning("2096-10")).approved[0]?.remainingCents,
     0,

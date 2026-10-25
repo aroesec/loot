@@ -177,20 +177,32 @@ export const budgetInput = z.object({
   amountCents: z.number().int().min(0).max(100_000_000),
   rollover: z.enum(["none", "under", "both"]),
 });
-export async function saveCategoryBudget(input: z.infer<typeof budgetInput>) {
+export async function saveCategoryBudget(
+  input: z.infer<typeof budgetInput>,
+  onlyIfUnset = false,
+) {
   const value = budgetInput.parse(input);
   if (!(await planningCategories()).some((row) => row.id === value.categoryId))
     throw new PlanningError("Choose a spending category in this ledger.");
   const effectiveFrom = monthBounds(value.month).start;
   const dayBefore = (date: string) =>
     new Date(Date.parse(date) - 86_400_000).toISOString().slice(0, 10);
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(${71_839_212})`);
     const versions = await tx
       .select()
       .from(budgets)
       .where(eq(budgets.categoryId, value.categoryId))
       .orderBy(asc(budgets.effectiveFrom));
+    if (
+      onlyIfUnset &&
+      versions.some(
+        (row) =>
+          row.effectiveFrom <= monthBounds(value.month).end &&
+          (!row.effectiveTo || row.effectiveTo >= effectiveFrom),
+      )
+    )
+      return false;
     const current = versions.find((row) => row.effectiveFrom === effectiveFrom);
     const next = versions.find((row) => row.effectiveFrom > effectiveFrom);
     const previous = versions
@@ -215,5 +227,80 @@ export async function saveCategoryBudget(input: z.infer<typeof budgetInput>) {
         .update(budgets)
         .set({ effectiveTo: dayBefore(effectiveFrom) })
         .where(eq(budgets.id, previous.id));
+    return true;
   });
+}
+
+/** Explicit user action; never writes plans while rendering a page. */
+export async function populateRecurringBudgets(month: string) {
+  incomeMonth.parse(month);
+  const recurring = await expensePlanning(month);
+  for (const suggestion of recurring.suggestions)
+    await saveExpensePlan(suggestion);
+  const plan = await budgetPlanning(month);
+  const { start, end } = monthBounds(month);
+  const existing = await db
+    .select()
+    .from(budgets)
+    .where(
+      and(
+        lte(budgets.effectiveFrom, end),
+        sql`(${budgets.effectiveTo} is null or ${budgets.effectiveTo} >= ${start})`,
+      ),
+    );
+  let created = 0;
+  for (const line of plan.lines) {
+    // A deliberately cleared budget is a user decision too.
+    if (
+      line.recurringCents <= 0 ||
+      existing.some((row) => row.categoryId === line.id)
+    )
+      continue;
+    const saved = await saveCategoryBudget(
+      {
+        categoryId: line.id,
+        month,
+        amountCents: line.recurringCents,
+        rollover: "none",
+      },
+      true,
+    );
+    if (saved) created++;
+  }
+  return { approved: recurring.suggestions.length, created };
+}
+
+export async function allocationPlanning(month: string) {
+  incomeMonth.parse(month);
+  const { fundSummary } = await import("@/lib/funds");
+  const { fundForecast } = await import("./logic");
+  const [current, previous, earlier] = await Promise.all([
+    fundSummary(month),
+    fundSummary(shiftMonth(month, -1)),
+    fundSummary(shiftMonth(month, -2)),
+  ]);
+  const byFund = current.byFund.map((fund) => ({
+    ...fund,
+    ...fundForecast({
+      contributedCents: fund.contributedCents,
+      withdrawnCents: fund.withdrawnCents,
+      previousCents:
+        previous.byFund.find((row) => row.id === fund.id)?.contributedCents ??
+        0,
+      earlierCents:
+        earlier.byFund.find((row) => row.id === fund.id)?.contributedCents ?? 0,
+    }),
+  }));
+  return {
+    byFund,
+    savingsCents: byFund
+      .filter((row) => row.kind === "savings")
+      .reduce((sum, row) => sum + row.forecastCents, 0),
+    investmentCents: byFund
+      .filter((row) => row.kind === "investment")
+      .reduce((sum, row) => sum + row.forecastCents, 0),
+    remainingCents: byFund.reduce((sum, row) => sum + row.remainingCents, 0),
+    recordedCents: current.netCents,
+    forecastCents: byFund.reduce((sum, row) => sum + row.forecastCents, 0),
+  };
 }

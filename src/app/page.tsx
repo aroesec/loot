@@ -1,6 +1,7 @@
-import { budgetPlanning } from "@/lib/planning";
+import { allocationPlanning, budgetPlanning } from "@/lib/planning";
 import { incomeProjection, listIncomePlans } from "@/lib/income";
 import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
+import { AllocationSummary } from "@/components/allocation-summary";
 import { IncomeSummary } from "@/components/income-summary";
 import { fundSummary } from "@/lib/funds";
 import Link from "next/link";
@@ -120,6 +121,7 @@ export default async function OverviewPage({
   const spendingPlan = mode === "personal" ? await budgetPlanning(month) : null;
   const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
   const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
+  const allocations = mode === "personal" ? await allocationPlanning(month) : null;
   const fundTotals = mode === "personal" ? await fundSummary(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
@@ -141,7 +143,8 @@ export default async function OverviewPage({
         }
       />
 
-      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={fundTotals?.netCents ?? 0} plannedSpendCents={spendingPlan?.forecastCents} />}
+      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={allocations?.forecastCents ?? 0} plannedSpendCents={spendingPlan?.forecastCents} />}
+      {projection && allocations && spendingPlan && <AllocationSummary incomeCents={projection.projectedIncomeCents} expensesCents={spendingPlan.forecastCents} funds={allocations} />}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat

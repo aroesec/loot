@@ -45,3 +45,12 @@ Apply generated migration 0021 before code. JSON export version 7 includes all
 expense-plan revisions. No user's recurring bills or budgets are pre-approved or
 seeded. Unit tests and test/integration/planning.ts verify approval, replacement,
 month-effective revisions, removal, and category budget overlap.
+
+
+## Cash allocation and automatic budgets
+
+Overview and Budgets show expenses, savings, and investments separately. Income is unchanged; left to spend subtracts all three. A negative result has an explicit shortfall warning.
+
+The explicit “Budget detected recurring bills” action includes the currently detected monthly bills and creates budgets only for categories without an effective budget. Existing budgets (including deliberate zero budgets) and excluded bills are preserved. Retrying does not duplicate bills or budgets. Recorded charges replace bill estimates.
+
+Fund estimates use each fund’s gross contributions in the previous two complete calendar months. Both must be positive and within 50% of one another; the most recent month supplies the estimate. Current contributions replace that estimate, and withdrawals reduce the net allocation. Only the configured funding account is counted, so the receiving side does not double count. One-off and changing contributions have no inferred future amount. Estimates are explicitly labeled and are not a bank balance or a guarantee of future transfers.

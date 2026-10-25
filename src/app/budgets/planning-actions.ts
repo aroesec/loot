@@ -78,3 +78,28 @@ export async function expenseAction(
     };
   }
 }
+
+export async function populateAction(
+  _state: PlanningState,
+  form: FormData,
+): Promise<PlanningState> {
+  if (!(await isAuthenticated()))
+    return { error: "Your session expired. Sign in again." };
+  const { incomeMonth } = await import("@/lib/income/logic");
+  const month = incomeMonth.safeParse(form.get("month"));
+  if (!month.success) return { error: "Choose a valid month." };
+  try {
+    const { populateRecurringBudgets } = await import("@/lib/planning");
+    const result = await populateRecurringBudgets(month.data);
+    revalidatePath("/", "layout");
+    return {
+      message: `${result.approved} recurring bills included; ${result.created} category budgets created. Existing budgets preserved.`,
+    };
+  } catch {
+    revalidatePath("/", "layout");
+    return {
+      error:
+        "Some items could not be saved. Reload and retry; existing budgets will be preserved.",
+    };
+  }
+}

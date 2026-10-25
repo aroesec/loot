@@ -183,3 +183,32 @@ export function budgetAlert({
   if (spentCents >= availableCents * 0.75) return "Approaching the limit";
   return "Within budget";
 }
+
+/** Reserve a repeat monthly contribution once; recorded transfers replace it. */
+export function fundForecast({
+  contributedCents,
+  withdrawnCents,
+  previousCents,
+  earlierCents,
+}: {
+  contributedCents: number;
+  withdrawnCents: number;
+  previousCents: number;
+  earlierCents: number;
+}) {
+  const recurringCents =
+    previousCents > 0 &&
+    earlierCents > 0 &&
+    Math.max(previousCents, earlierCents) /
+      Math.min(previousCents, earlierCents) <=
+      1.5
+      ? previousCents
+      : 0;
+  const remainingCents = Math.max(0, recurringCents - contributedCents);
+  return {
+    recurringCents,
+    remainingCents,
+    recordedCents: contributedCents - withdrawnCents,
+    forecastCents: contributedCents + remainingCents - withdrawnCents,
+  };
+}

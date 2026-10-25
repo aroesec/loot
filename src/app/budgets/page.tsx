@@ -3,9 +3,10 @@ import { requireAuth } from "@/lib/auth";
 import { availableMonths } from "@/lib/ledger";
 import { currentMonth, monthLabel } from "@/lib/dates";
 import { incomeMonth } from "@/lib/income/logic";
-import { budgetPlanning } from "@/lib/planning";
+import { allocationPlanning, budgetPlanning } from "@/lib/planning";
 import { incomeProjection } from "@/lib/income";
-import { fundSummary } from "@/lib/funds";
+import { AllocationSummary } from "@/components/allocation-summary";
+import { AutoBudget } from "@/components/auto-budget";
 import { PageHeader, Card, Stat } from "@/components/ui";
 import { PeriodPicker } from "@/components/period-picker";
 import { BudgetPlanner } from "@/components/budget-planner";
@@ -24,7 +25,7 @@ export default async function BudgetsPage({
   const [plan, income, funds, history] = await Promise.all([
     budgetPlanning(month),
     incomeProjection(month),
-    fundSummary(month),
+    allocationPlanning(month),
     availableMonths(),
   ]);
   const months = [...new Set([month, currentMonth(), ...history])]
@@ -33,7 +34,7 @@ export default async function BudgetsPage({
   const left =
     income.projectedIncomeCents === null
       ? null
-      : income.projectedIncomeCents - plan.forecastCents - funds.netCents;
+      : income.projectedIncomeCents - plan.forecastCents - funds.forecastCents;
   return (
     <>
       <PageHeader
@@ -67,9 +68,14 @@ export default async function BudgetsPage({
           label="Left after the plan"
           value={left === null ? "—" : formatCents(left)}
           tone={left !== null && left < 0 ? "negative" : "positive"}
-          detail="Projected income minus planned spending and recorded savings/investment contributions"
+          detail="Projected income minus planned spending and planned savings and investments"
         />
       </div>
+      <AllocationSummary
+        incomeCents={income.projectedIncomeCents}
+        expensesCents={plan.forecastCents}
+        funds={funds}
+      />
       <Card className="mb-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -84,6 +90,7 @@ export default async function BudgetsPage({
             Review bills
           </Link>
         </div>
+        <AutoBudget month={month} />
         <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
           The plan uses the larger of each category’s budget or its spending
           plus unpaid approved bills. Unbudgeted purchases and unapproved future

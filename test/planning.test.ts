@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  fundForecast,
   suggestExpenses,
   projectExpenses,
   categoryForecast,
@@ -146,5 +147,48 @@ describe("expense approval and budget forecasts", () => {
     expect(
       budgetAlert({ spentCents: 100, availableCents: 0, hasBudget: false }),
     ).toBe("No budget set");
+  });
+});
+
+describe("savings and investment cash allocation", () => {
+  it("reserves remaining repeat contributions and replaces estimates with actual transfers", () => {
+    expect(
+      fundForecast({
+        contributedCents: 20000,
+        withdrawnCents: 3000,
+        previousCents: 50000,
+        earlierCents: 50000,
+      }),
+    ).toEqual({
+      recurringCents: 50000,
+      remainingCents: 30000,
+      recordedCents: 17000,
+      forecastCents: 47000,
+    });
+    expect(
+      fundForecast({
+        contributedCents: 60000,
+        withdrawnCents: 0,
+        previousCents: 50000,
+        earlierCents: 50000,
+      }).forecastCents,
+    ).toBe(60000);
+  });
+  it("does not infer a schedule from one-off or widely varying contributions", () => {
+    for (const earlierCents of [0, 10000]) {
+      expect(
+        fundForecast({
+          contributedCents: 20000,
+          withdrawnCents: 25000,
+          previousCents: 50000,
+          earlierCents,
+        }),
+      ).toEqual({
+        recurringCents: 0,
+        remainingCents: 0,
+        recordedCents: -5000,
+        forecastCents: -5000,
+      });
+    }
   });
 });
