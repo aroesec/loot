@@ -534,6 +534,18 @@ export type ParseUsage = {
   ms: number;
 };
 
+// Fund transfers are identified on one funding account so importing both sides
+// never doubles the contribution. The optional destination enables pairing.
+export const funds = pgTable("funds", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  kind: text("kind").$type<"savings" | "investment">().notNull(),
+  fundingAccountId: uuid("funding_account_id").notNull().references(() => accounts.id),
+  destinationAccountId: uuid("destination_account_id").references(() => accounts.id),
+  patterns: jsonb("patterns").$type<string[]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ---------------------------------------------------------------------------
 // Transactions — the ledger itself
 // ---------------------------------------------------------------------------
@@ -545,6 +557,7 @@ export const transactions = pgTable(
     accountId: uuid("account_id").references(() => accounts.id, {
       onDelete: "set null",
     }),
+    fundId: uuid("fund_id").references(() => funds.id, { onDelete: "set null" }),
     statementId: uuid("statement_id").references(() => statements.id, {
       onDelete: "set null",
     }),
@@ -1003,3 +1016,17 @@ export type Settings = typeof settings.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type NewPerson = typeof people.$inferInsert;
 export type MileageTrip = typeof mileageTrips.$inferSelect;
+
+/** Month-effective revisions preserve earlier income expectations. */
+export const incomePlans = pgTable("income_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceId: uuid("source_id").notNull(),
+  name: text("name").notNull(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id),
+  pattern: text("pattern").notNull(),
+  effectiveMonth: text("effective_month").notNull(),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  paymentsPerMonth: integer("payments_per_month").notNull().default(2),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("income_plans_source_month_key").on(t.sourceId, t.effectiveMonth)]);

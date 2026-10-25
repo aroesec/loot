@@ -391,3 +391,13 @@ describe("seed rule invariants", () => {
     expect(conflicting).toEqual([]);
   });
 });
+
+
+describe("business payment receipts", () => {
+  it("counts incoming BILL payments as income without treating outgoing bills as income", () => {
+    for (const description of ["BILL.COM payment Example client", "Billcom ACH receipt", "Bill com deposit"]) {
+      expect(classify(description, 125000)).toMatchObject({ slug: "freelance-income", isTransfer: false });
+      expect(classify(description, -125000).slug).not.toBe("freelance-income");
+    }
+  });
+});

@@ -145,3 +145,12 @@ jobs:
         run: |
           pnpm tsx src/db/seed.ts
           pnpm tsx src/db/seed.ts
+
+      - name: Fund transfer integration
+        run: pnpm tsx test/integration/funds.ts
+
+      - name: Monthly income integration
+        run: pnpm tsx test/integration/income.ts
+
+      - name: Business income to savings integration
+        run: pnpm tsx test/integration/business-income.ts

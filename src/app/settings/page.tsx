@@ -1,3 +1,9 @@
+import { randomUUID } from "node:crypto";
+import { IncomeSettings } from "@/components/income-settings";
+import { listIncomePlans, recentPaychecks } from "@/lib/income";
+import { currentMonth } from "@/lib/dates";
+import { FundSettings } from "@/components/fund-settings";
+import { listFunds } from "@/lib/funds";
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/db";
 import { accounts, categories, merchantRules, plaidItems, people } from "@/db/schema";
@@ -87,6 +93,9 @@ export default async function SettingsPage({
     db.select().from(people).where(isNull(people.archivedAt)).orderBy(people.name),
   ]);
 
+  const [incomeRows, paychecks] = mode === "personal" ? await Promise.all([listIncomePlans(), recentPaychecks()]) : [[], []];
+  const fundRows = mode === "personal" ? await listFunds() : [];
+
   const parents = categoryRows.filter((c) => !c.parentId);
   const total = Number(ruleStats[0]?.total ?? 0);
   const learned = Number(ruleStats[0]?.learned ?? 0);
@@ -103,6 +112,8 @@ export default async function SettingsPage({
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {mode === "personal" && <Card className="lg:col-span-2"><IncomeSettings plans={incomeRows} paychecks={paychecks} accounts={accountRows} month={currentMonth()} newSourceId={randomUUID()} /></Card>}
+        {mode === "personal" && <Card className="lg:col-span-2"><FundSettings funds={fundRows} accounts={accountRows} /></Card>}
         {/* --- Theme -------------------------------------------------- */}
         <Card className="lg:col-span-2">
           <h2 className="text-lg">Theme</h2>

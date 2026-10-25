@@ -929,3 +929,28 @@ token.
 
 `vercel env pull` returns `[SENSITIVE]` rather than the value for env vars
 marked sensitive, so secrets cannot be round-tripped back out of Vercel.
+
+## Savings and investment funds
+
+Settings defines owned funds with a funding account, transfer description
+patterns, and an optional imported destination account. This explicit ownership
+setting takes precedence over generic institution rules. It does not change
+manual classifications. Interest, dividends, fees and loan descriptions do not
+match fund rules.
+
+Configured transfers carry `fund_id` and `is_transfer`; the existing ledger
+queries exclude them from income and spending. Contributions and withdrawals
+are totaled only on the funding account. A unique opposite entry in the selected
+destination within three days can be marked as the counterpart, including when
+that account is imported later. Ambiguous matches remain untouched. This does
+not estimate account balances or investment returns.
+
+Saving or removing a fund refreshes automatic classifications in the same
+database transaction. Removing a mapping restores ordinary rules and queues
+unmatched rows for review. Import and rule reapplication refresh funds too.
+The existing savings-churn analysis includes configured contributions without
+double-counting their counterpart. JSON exports include the fund definitions.
+
+The database integration check is separate from the DB-free unit suite:
+`pnpm tsx test/integration/funds.ts`, against a disposable local database after
+migration and seeding.
