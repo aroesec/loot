@@ -957,6 +957,7 @@ export const SEED_RULES: SeedRule[] = [
   { pattern: "betterment", category: "investments", merchant: "Betterment" },
 
   // Income
+  { pattern: "\\bbill(?:\\.com| com|com)\\b", matchType: "regex", appliesTo: "credit", category: "freelance-income", merchant: "BILL", priority: 130 },
   { pattern: "payroll", category: "salary", priority: 130 },
   { pattern: "direct dep", category: "salary", priority: 130 },
   { pattern: "dir dep", category: "salary", priority: 130 },

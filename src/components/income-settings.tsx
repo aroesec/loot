@@ -27,7 +27,7 @@ function IncomeForm({ plan, accounts, month }: { plan: IncomePlan; accounts: Acc
       <label className="text-sm">Apply from month<input className="field mt-1 w-full" name="effectiveMonth" type="month" required defaultValue={month} /></label>
       <label className="text-sm">Deposit description contains<input className="field mt-1 w-full" name="pattern" required minLength={4} maxLength={200} defaultValue={plan.pattern} autoComplete="off" /></label>
     </div>
-    <p className="text-xs text-[var(--color-ink-muted)]">Use a distinctive payroll description. Only cleared deposits into this account mark a payment received. Changes apply from the selected month onward.</p>
+    <p className="text-xs text-[var(--color-ink-muted)]">Use a distinctive income description. Only cleared deposits into this account mark a payment received. Changes apply from the selected month onward.</p>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="enabled" defaultChecked={plan.enabled} />Include in monthly plan</label>
       <button className="btn btn-primary" disabled={pending}>{pending ? "Saving…" : "Save income source"}</button>
@@ -47,8 +47,8 @@ export function IncomeSettings({ plans, paychecks, accounts, month, newSourceId 
       <summary className="cursor-pointer text-sm"><strong>{plan.name}</strong> · {plan.paymentsPerMonth} × {formatCents(plan.amountCents)}{!plan.enabled && " · Paused"}<span className="block mt-1 text-xs text-[var(--color-ink-muted)]">From {plan.effectiveMonth} · Edit plan</span></summary>
       <IncomeForm plan={plan} accounts={eligible} month={month < plan.effectiveMonth ? plan.effectiveMonth : month} />
     </details>)}</div>
-    <label className="mt-5 block text-sm">Add from a recent paycheck<select className="field mt-1 w-full" value={selected} onChange={(event) => setSelected(event.target.value)}><option value="">Choose an imported paycheck…</option>{paychecks.map((row) => <option key={row.id} value={row.id}>{row.name ?? row.pattern} · {formatCents(row.amountCents)} · {row.postedOn}</option>)}</select></label>
-    {!paychecks.length && <p className="mt-2 text-sm text-[var(--color-ink-muted)]">Import or record a deposit categorized as Salary &amp; Wages to create a plan.</p>}
+    <label className="mt-5 block text-sm">Add from a recent income deposit<select className="field mt-1 w-full" value={selected} onChange={(event) => setSelected(event.target.value)}><option value="">Choose an imported income deposit…</option>{paychecks.map((row) => <option key={row.id} value={row.id}>{row.name ?? row.pattern} · {formatCents(row.amountCents)} · {row.postedOn}</option>)}</select></label>
+    {!paychecks.length && <p className="mt-2 text-sm text-[var(--color-ink-muted)]">Import or record a deposit in an income category to create a plan.</p>}
     {paycheck && <IncomeForm key={paycheck.id} plan={{ sourceId: newSourceId, name: paycheck.name ?? paycheck.pattern, pattern: paycheck.pattern, accountId: paycheck.accountId, amountCents: paycheck.amountCents, paymentsPerMonth: 2, enabled: true, effectiveMonth: month }} accounts={eligible} month={month} />}
   </section>;
 }

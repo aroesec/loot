@@ -31,3 +31,11 @@ JSON exports include all month-effective income plan revisions (format 6).
 Validation: `npm test`, `npm run typecheck`, `npm run build`. Integration:
 `node --env-file=.env.local --import tsx test/integration/income.ts`, against a
 migrated, seeded, disposable local database only. CI runs the integration test.
+
+Business receipts such as incoming BILL payments are income. An onward transfer
+into a configured savings fund is a contribution, not an expense. If the savings
+account is imported too, its matching receipt is excluded so the original income
+is counted once. Outgoing BILL payments do not use the incoming-income rule.
+Income settings can select deposits from any income category; only add a monthly
+expectation when the payment frequency is known. Irregular business receipts
+already count toward received income without an expected-payment plan.

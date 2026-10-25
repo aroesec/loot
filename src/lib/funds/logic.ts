@@ -19,13 +19,14 @@ export type Fund = Omit<FundInput, "id"> & { id: string };
 
 // Interest and distributions are new money, not a return of principal. Never
 // let a user-entered institution pattern silently remove these from income.
+const BUSINESS_RECEIPT = /\bbill(?:\.com| com|com)\b/i;
 const NON_TRANSFER = /\b(interest|int|dividend|dividends|div|fee|fees|payroll|cashback|reward|rewards|loan|mortgage|purchase|insurance)\b/i;
 
 export function matchFund(
   row: { accountId: string | null; rawDescription: string; amountCents: number },
   funds: Fund[],
 ): Fund | null {
-  if (!row.amountCents || NON_TRANSFER.test(row.rawDescription)) return null;
+  if (!row.amountCents || NON_TRANSFER.test(row.rawDescription) || (row.amountCents > 0 && BUSINESS_RECEIPT.test(row.rawDescription))) return null;
   const description = normalizeDescription(row.rawDescription);
   const matches = funds.filter((f) => f.fundingAccountId === row.accountId &&
     f.patterns.some((p) => {
@@ -52,7 +53,7 @@ export function pairFundTransfers(rows: Movement[], funds: Fund[]): Array<{ id: 
   const fundById = new Map(funds.map((f) => [f.id, f]));
   const byAccountAmount = new Map<string, Movement[]>();
   for (const row of rows) {
-    if (row.classificationSource === "manual" || NON_TRANSFER.test(row.rawDescription) ||
+    if (row.classificationSource === "manual" || NON_TRANSFER.test(row.rawDescription) || (row.amountCents > 0 && BUSINESS_RECEIPT.test(row.rawDescription)) ||
       !/\b(transfer|ach|moneyline|deposit|withdrawal|checking|savings)\b/i.test(row.rawDescription)) continue;
     const key = `${row.accountId}:${row.currency ?? "USD"}:${row.amountCents}`;
     byAccountAmount.set(key, [...(byAccountAmount.get(key) ?? []), row]);

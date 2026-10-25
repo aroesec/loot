@@ -33,3 +33,13 @@ describe("owned fund transfers", () => {
     expect(fundInput.safeParse({ name: "Savings", kind: "savings", fundingAccountId: id, destinationAccountId: id, patterns: ["example transfer"] }).success).toBe(false);
   });
 });
+
+describe("business receipts moved into savings", () => {
+  it("keeps a business receipt as income even when a savings pattern overlaps", () => {
+    expect(matchFund({ accountId: "checking", rawDescription: "BILL.COM example bank transfer", amountCents: 125000 }, [fund])).toBeNull();
+    expect(matchFund({ accountId: "checking", rawDescription: "example bank transfer", amountCents: -125000 }, [fund])?.id).toBe("fund");
+    const debit = { id: "out", accountId: "checking", fundId: "fund", amountCents: -125000, postedOn: "2026-01-10", rawDescription: "Example bank transfer", classificationSource: "rule" };
+    const receipt = { ...debit, id: "business", accountId: "savings", fundId: null, amountCents: 125000, rawDescription: "BILL.COM ACH deposit" };
+    expect(pairFundTransfers([debit, receipt], [fund])).toEqual([]);
+  });
+});

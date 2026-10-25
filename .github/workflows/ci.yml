@@ -151,3 +151,6 @@ jobs:
 
       - name: Monthly income integration
         run: pnpm tsx test/integration/income.ts
+
+      - name: Business income to savings integration
+        run: pnpm tsx test/integration/business-income.ts

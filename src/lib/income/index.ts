@@ -21,7 +21,7 @@ export async function recentPaychecks() {
   const rows = await db.select({ id: transactions.id, name: transactions.merchant, pattern: transactions.rawDescription, accountId: accounts.id, amountCents: transactions.amountCents, postedOn: transactions.postedOn })
     .from(transactions).innerJoin(categories, eq(transactions.categoryId, categories.id))
     .innerJoin(accounts, eq(transactions.accountId, accounts.id))
-    .where(and(eq(categories.slug, "salary"), gt(transactions.amountCents, 0), eq(transactions.isTransfer, false), eq(transactions.status, "cleared"), isNull(accounts.archivedAt)))
+    .where(and(eq(categories.kind, "income"), gt(transactions.amountCents, 0), eq(transactions.isTransfer, false), eq(transactions.status, "cleared"), isNull(accounts.archivedAt)))
     .orderBy(desc(transactions.postedOn)).limit(100);
   return rows.filter((row, i) => rows.findIndex((other) => other.accountId === row.accountId && other.pattern === row.pattern) === i);
 }
