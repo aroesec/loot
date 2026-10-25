@@ -57,3 +57,8 @@ Fund estimates use each fund’s gross contributions in the previous two complet
 
 
 Saved weekly fund schedules override the inferred monthly contribution for that fund. Set an amount and weekday on Budgets or Overview. Revisions apply from the selected month forward. Each calendar occurrence reserves one transfer; a same-amount funding-account transfer in the selected month within three days replaces it, once. Extra one-off contributions remain recorded contributions and do not consume weekly occurrences. Pausing a schedule keeps recorded contributions and removes future reservations. No bank transfer is scheduled or changed. Reconcile transfers posted across month boundaries or with changed amounts manually before relying on the forecast.
+
+
+## Monthly actuals
+
+Overview starts with Actuals so far for the current month and Month-end actuals for past months. It uses only cleared transactions in the selected month: actual income, non-transfer expenses, and net transfers on each configured fund’s funding account. The receiving side is excluded. Further savings is max(0, received income minus expenses minus net fund contributions); negative cash flow is explained separately rather than presented as money available to save. Budgets, schedules, forecast income, untracked payroll deductions, and investment gains do not enter these totals. Pending movements and unlinked card data are flagged, and closed-month totals continue to update as statements arrive. This is a month’s cash flow, not a bank balance or confirmation of data completeness.

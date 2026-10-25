@@ -1,3 +1,4 @@
+import { monthlyActuals } from "@/lib/planning/actuals";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
@@ -143,41 +144,48 @@ async function run() {
       rollover: "none",
     }),
   );
-  await db
-    .insert(funds)
-    .values({
-      id: fundId,
-      name: "Test savings",
-      kind: "savings",
-      fundingAccountId: accountId,
-      patterns: ["Test savings"],
-    });
-  await db
-    .insert(transactions)
-    .values(
-      [6, 14, 20].map((day) => ({
-        accountId,
-        fundId,
-        categoryId,
-        rawDescription: "Test savings transfer",
-        amountCents: -20000,
-        postedOn: `2026-10-${String(day).padStart(2, "0")}`,
-        isTransfer: true,
-        dedupeHash: randomUUID(),
-      })),
-    );
-  await db
-    .insert(transactions)
-    .values({
+  await db.insert(funds).values({
+    id: fundId,
+    name: "Test savings",
+    kind: "savings",
+    fundingAccountId: accountId,
+    patterns: ["Test savings"],
+  });
+  await db.insert(transactions).values(
+    [6, 14, 20].map((day) => ({
       accountId,
       fundId,
       categoryId,
-      rawDescription: "Test extra savings",
-      amountCents: -100000,
-      postedOn: "2026-10-16",
+      rawDescription: "Test savings transfer",
+      amountCents: -20000,
+      postedOn: `2026-10-${String(day).padStart(2, "0")}`,
       isTransfer: true,
       dedupeHash: randomUUID(),
-    });
+    })),
+  );
+  await db.insert(transactions).values({
+    accountId,
+    fundId,
+    categoryId,
+    rawDescription: "Test extra savings",
+    amountCents: -100000,
+    postedOn: "2026-10-16",
+    isTransfer: true,
+    dedupeHash: randomUUID(),
+  });
+  const actual = await monthlyActuals("2026-10");
+  assert.equal(
+    actual.savedCents,
+    160000,
+    "actual savings ignores weekly forecasts",
+  );
+  assert.equal(actual.incomeCents, 0);
+  assert.equal(actual.spentCents, 0, "fund contributions are not expenses");
+  assert.equal(
+    actual.furtherSavingsCents,
+    0,
+    "prior cash contributions do not imply income",
+  );
   const weekly = {
     fundId,
     effectiveMonth: "2026-10",

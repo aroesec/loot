@@ -1,9 +1,10 @@
+import { monthlyActuals } from "@/lib/planning/actuals";
+import { MonthlyActuals } from "@/components/monthly-actuals";
 import { allocationPlanning, budgetPlanning } from "@/lib/planning";
 import { incomeProjection, listIncomePlans } from "@/lib/income";
 import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
 import { AllocationSummary } from "@/components/allocation-summary";
 import { IncomeSummary } from "@/components/income-summary";
-import { fundSummary } from "@/lib/funds";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
@@ -122,7 +123,7 @@ export default async function OverviewPage({
   const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
   const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
   const allocations = mode === "personal" ? await allocationPlanning(month) : null;
-  const fundTotals = mode === "personal" ? await fundSummary(month) : null;
+  const actuals = mode === "personal" ? await monthlyActuals(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
   // who does not already suspect it.
@@ -143,10 +144,12 @@ export default async function OverviewPage({
         }
       />
 
+      {actuals && <MonthlyActuals month={month} currentMonth={currentMonth()} totals={actuals} hasAccountGaps={unreconciled.length > 0} />}
+
       {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={allocations?.forecastCents ?? 0} plannedSpendCents={spendingPlan?.forecastCents} />}
       {projection && allocations && spendingPlan && <AllocationSummary month={month} incomeCents={projection.projectedIncomeCents} expensesCents={spendingPlan.forecastCents} funds={allocations} />}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {mode === "business" && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label={words.income}
           value={formatCents(summary.incomeCents)}
@@ -183,27 +186,7 @@ export default async function OverviewPage({
               : "Share of income you kept"
           }
         />
-      </div>
-
-      {fundTotals && <Card className="mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg">Savings &amp; investments</h2>
-          <Link href="/settings#funds" className="btn">Manage funds</Link>
-        </div>
-        {fundTotals.byFund.length === 0 ? <p className="mt-3 text-sm text-[var(--color-ink-muted)]">Add your funds in Settings to track contributions separately from expenses.</p> : <>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <Stat label="Net savings contributions" value={formatCents(fundTotals.savingsCents)} />
-            <Stat label="Net investment contributions" value={formatCents(fundTotals.investmentCents)} />
-            <Stat label="Left after contributions" value={formatCents(summary.netCents - fundTotals.netCents)} detail="Income minus spending and net fund contributions; not an account balance." />
-          </div>
-          <div className="mt-4 space-y-3">
-            {fundTotals.byFund.map((f) => <div key={f.id} className="flex flex-wrap justify-between gap-2 border-t border-[var(--color-border)] pt-3 text-sm">
-              <span>{f.name} <span className="text-[var(--color-ink-muted)]">· {f.kind === "savings" ? "Savings" : "Investment"}</span></span>
-              <span>Contributed {formatCents(f.contributedCents)} · Withdrawn {formatCents(f.withdrawnCents)}</span>
-            </div>)}
-          </div>
-        </>}
-      </Card>}
+      </div>}
 
       {unreconciled.length > 0 ? (
         <Card className="mt-4 border-[var(--color-warning)] bg-[var(--color-warning-soft)]">

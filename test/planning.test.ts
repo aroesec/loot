@@ -1,3 +1,4 @@
+import { calculateActuals } from "@/lib/planning/actuals-logic";
 import { weeklyFundForecast } from "@/lib/planning/fund-schedule";
 import { describe, it, expect } from "vitest";
 import {
@@ -241,5 +242,62 @@ describe("weekly fund plans", () => {
         rows: [],
       }).forecastCents,
     ).toBe(20000);
+  });
+});
+
+describe("monthly actuals", () => {
+  it("reconciles real income, expenses, and net fund transfers without counting both sides or pending money", () => {
+    const row = {
+      id: "base",
+      amountCents: 100000,
+      status: "cleared",
+      isTransfer: false,
+      fundingSide: false,
+      fundKind: null,
+    };
+    const saved = {
+      ...row,
+      id: "saved",
+      amountCents: -20000,
+      isTransfer: true,
+      fundingSide: true,
+      fundKind: "savings" as const,
+    };
+    const totals = calculateActuals([
+      row,
+      { ...row, id: "expense", amountCents: -30000 },
+      saved,
+      saved,
+      {
+        ...saved,
+        id: "receiving-side",
+        amountCents: 20000,
+        fundingSide: false,
+      },
+      { ...saved, id: "withdrawal", amountCents: 5000 },
+      { ...row, id: "pending-pay", amountCents: 90000, status: "pending" },
+      { ...saved, id: "pending-save", status: "pending" },
+    ]);
+    expect(totals.incomeCents).toBe(100000);
+    expect(totals.spentCents).toBe(30000);
+    expect(totals.savedCents).toBe(15000);
+    expect(totals.furtherSavingsCents).toBe(55000);
+    expect(totals.pendingCount).toBe(2);
+  });
+  it("does not call a negative monthly cash flow money available to save", () => {
+    const totals = calculateActuals([
+      {
+        id: "saving-from-prior-cash",
+        amountCents: -20000,
+        status: "cleared",
+        isTransfer: true,
+        fundingSide: true,
+        fundKind: "investment",
+      },
+    ]);
+    expect(totals.savedCents).toBe(20000);
+    expect(totals.leftCents).toBe(-20000);
+    expect(totals.furtherSavingsCents).toBe(0);
+    expect(calculateActuals([]).furtherSavingsCents).toBe(0);
   });
 });
