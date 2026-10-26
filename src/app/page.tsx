@@ -1,3 +1,4 @@
+import { fundSummary } from "@/lib/funds";
 import { monthlyActuals } from "@/lib/planning/actuals";
 import { MonthlyActuals } from "@/components/monthly-actuals";
 import { budgetPlanning } from "@/lib/planning";
@@ -121,6 +122,7 @@ export default async function OverviewPage({
   const spendingPlan = mode === "personal" ? await budgetPlanning(month) : null;
   const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
   const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
+  const recordedFunds = mode === "personal" ? await fundSummary(month) : null;
   const actuals = mode === "personal" ? await monthlyActuals(month) : null;
   const income = mode === "personal" && month >= currentMonth() ? await incomeProjection(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
@@ -147,7 +149,7 @@ export default async function OverviewPage({
 
       {income && actuals && <IncomeOverview income={income} totals={actuals} />}
 
-      {spendingPlan && <ExpenseOverview month={month} currentMonth={currentMonth()} plan={spendingPlan} />}
+      {spendingPlan && recordedFunds && <ExpenseOverview month={month} currentMonth={currentMonth()} plan={spendingPlan} funds={recordedFunds} />}
 
       {mode === "business" && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat

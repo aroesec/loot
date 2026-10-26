@@ -1,17 +1,24 @@
 import Link from "next/link";
 import { Bar, Card, Stat } from "@/components/ui";
 import { formatCents } from "@/lib/money";
+import type { fundSummary } from "@/lib/funds";
 import type { budgetPlanning } from "@/lib/planning";
 
 export function ExpenseOverview({
   month,
   currentMonth,
   plan,
+  funds,
 }: {
   month: string;
   currentMonth: string;
   plan: Awaited<ReturnType<typeof budgetPlanning>>;
+  funds: Awaited<ReturnType<typeof fundSummary>>;
 }) {
+  const contributions = funds.byFund.reduce(
+    (sum, fund) => sum + fund.contributedCents,
+    0,
+  );
   const watch = plan.lines
     .filter(
       (line) =>
@@ -35,23 +42,56 @@ export function ExpenseOverview({
             detail="Recorded purchases and bills, including pending charges. Savings transfers excluded."
           />
           <Stat
-            label="Upcoming recurring expenses"
-            value={formatCents(plan.remainingBillsCents)}
+            label="Total money out"
+            value={formatCents(plan.spentCents + contributions)}
             detail={
               <>
-                {upcoming.length} approved{" "}
-                {upcoming.length === 1 ? "bill" : "bills"} not yet recorded this
-                month. Already recorded bills are excluded.
-                <Link
-                  href={`/recurring?month=${month}`}
-                  className="mt-2 block underline underline-offset-4"
-                >
-                  Review upcoming bills
-                </Link>
+                {formatCents(plan.spentCents)} expenses +{" "}
+                {formatCents(contributions)} savings &amp; investment transfers.
+                Includes pending activity; not your checking balance.
               </>
             }
           />
         </div>
+      )}
+      {month >= currentMonth && (
+        <Card>
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-lg">Recurring bills</h2>
+            <span className="figure text-xl">
+              {formatCents(plan.remainingBillsCents)} upcoming
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+            Approved bills not yet recorded this month. Separate from total
+            money out above.
+          </p>
+          {upcoming.length > 0 ? (
+            <ul className="mt-3 divide-y divide-[var(--color-border)]">
+              {upcoming.map((bill) => (
+                <li
+                  key={`${bill.accountId}-${bill.categoryId}-${bill.merchant}`}
+                  className="flex items-baseline justify-between gap-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 break-words">{bill.name}</span>
+                  <span className="figure shrink-0">
+                    {formatCents(bill.remainingCents)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm">
+              No approved recurring bills left to record this month.
+            </p>
+          )}
+          <Link
+            href={`/recurring?month=${month}`}
+            className="mt-3 inline-block text-sm underline underline-offset-4"
+          >
+            Review recurring bills
+          </Link>
+        </Card>
       )}
       <Card>
         <div className="flex flex-wrap items-baseline justify-between gap-3">
