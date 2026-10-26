@@ -43,11 +43,11 @@ export default async function UploadPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
+        <div className="min-w-0 lg:col-span-3">
           <UploadForm accounts={accountRows} hasLlm={hasLlm} />
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <Card>
             <h2 className="mb-3 text-lg">Recent imports</h2>
             {history.length === 0 ? (

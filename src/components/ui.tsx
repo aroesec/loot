@@ -18,7 +18,7 @@ export function PageHeader({
           <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{subtitle}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex gap-2">{actions}</div> : null}
+      {actions ? <div className="flex min-w-0 max-w-full flex-wrap gap-2">{actions}</div> : null}
     </div>
   );
 }

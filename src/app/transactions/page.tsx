@@ -205,7 +205,7 @@ export default async function TransactionsPage({
               className="field"
             />
           </div>
-          <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
+          <div className="flex flex-wrap items-end gap-2 sm:col-span-2 lg:col-span-5">
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
