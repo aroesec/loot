@@ -7,7 +7,6 @@ import { isAuthenticated } from "@/lib/auth";
 import { Nav } from "@/components/nav";
 import { DataHealth } from "@/components/data-health";
 import { ledgerMode } from "@/lib/mode";
-import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -106,14 +105,12 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-screen">
+        <a href="#main-content" className="skip-link">Skip to content</a>
         {authed ? (
           <div className="mx-auto flex min-h-screen w-full max-w-[1400px] flex-col lg:flex-row">
             <Nav mode={mode} />
             <div className="flex min-w-0 flex-1 flex-col">
-              <header className="flex items-center justify-end px-5 pt-5 lg:px-8">
-                <ThemeToggle />
-              </header>
-              <main className="min-w-0 flex-1 px-5 pb-16 pt-4 lg:px-8">
+              <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-5 pb-16 pt-5 lg:px-8 lg:pt-8">
                 {/*
                   Above the page, on every page. Both problems it covers are
                   invisible by construction: a misclassified row looks ordinary
@@ -126,7 +123,7 @@ export default async function RootLayout({
             </div>
           </div>
         ) : (
-          <main className="min-h-screen">{children}</main>
+          <main id="main-content" tabIndex={-1} className="min-h-screen">{children}</main>
         )}
       </body>
     </html>

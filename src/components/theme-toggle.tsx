@@ -23,11 +23,11 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
-      className="btn !px-2.5 !py-1.5"
+      className="btn min-h-11 min-w-11 shrink-0 !p-2"
       aria-label={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
       title={`Switch to ${mode === "dark" ? "light" : "dark"} mode`}
     >
-      <span aria-hidden className="text-xs">
+      <span aria-hidden className="text-lg leading-none">
         {mode === "dark" ? "☾" : "☀"}
       </span>
     </button>

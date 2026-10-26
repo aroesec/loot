@@ -5,6 +5,18 @@ const plan = { sourceId: "11111111-1111-4111-8111-111111111111", name: "Example 
 const payment = { id: "deposit", accountId: "22222222-2222-4222-8222-222222222222", rawDescription: "EXAMPLE PAYROLL", postedOn: "2026-01-15", amountCents: 300000, isTransfer: false, status: "cleared" as const };
 
 describe("monthly income plan", () => {
+  it("keeps the salary expectation fixed while business receipts and refunds increase landed income", () => {
+    const secondJob = { ...plan, sourceId: "second-job", pattern: "second payroll", amountCents: 100000 };
+    const rows = [payment, { ...payment, id: "business", rawDescription: "Business invoice", amountCents: 90000 }, { ...payment, id: "refund", rawDescription: "Tax refund", amountCents: 5000 }];
+    const result = projectIncome({ month: "2026-01", plans: [plan, secondJob], transactions: rows, receivedIncomeCents: 395000 });
+    expect(result.plannedIncomeCents).toBe(800000);
+    expect(result.receivedIncomeCents).toBe(395000);
+    expect(result.remainingCents).toBe(500000);
+    expect(result.sources.map((source) => source.receivedCount)).toEqual([1, 0]);
+    const next = projectIncome({ month: "2026-02", plans: [plan, secondJob], transactions: rows, receivedIncomeCents: 0 });
+    expect(next.plannedIncomeCents).toBe(800000);
+    expect(next.remainingCents).toBe(800000);
+  });
   it("starts with two expected payments and replaces them as actual money arrives", () => {
     const start = projectIncome({ month: "2026-01", plans: [plan], transactions: [], receivedIncomeCents: 0 });
     expect(start.projectedIncomeCents).toBe(600000);

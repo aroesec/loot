@@ -1,7 +1,11 @@
+import { fundSummary } from "@/lib/funds";
+import { monthlyActuals } from "@/lib/planning/actuals";
+import { MonthlyActuals } from "@/components/monthly-actuals";
+import { budgetPlanning } from "@/lib/planning";
 import { incomeProjection, listIncomePlans } from "@/lib/income";
 import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
-import { IncomeSummary } from "@/components/income-summary";
-import { fundSummary } from "@/lib/funds";
+import { IncomeOverview } from "@/components/income-overview";
+import { ExpenseOverview } from "@/components/expense-overview";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
@@ -103,8 +107,7 @@ export default async function OverviewPage({
   }
 
   const needsReview = Number(reviewCount[0]?.count ?? 0);
-  const subCount = Number(activeSubs[0]?.count ?? 0);
-  const subAnnual = Number(activeSubs[0]?.annual ?? 0);
+
   const prior = months.indexOf(month) + 1;
   const priorMonth = months[prior] ?? shiftMonth(month, -1);
   const priorSummary = await monthSummary(priorMonth);
@@ -116,8 +119,12 @@ export default async function OverviewPage({
   // A business has no savings rate and a person has no net margin. Showing
   // the wrong word invites reading a number that does not mean what it says.
   const words = vocabulary(mode);
-  const projection = mode === "personal" ? await incomeProjection(month) : null;
-  const fundTotals = mode === "personal" ? await fundSummary(month) : null;
+  const spendingPlan = mode === "personal" ? await budgetPlanning(month) : null;
+  const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
+  const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
+  const recordedFunds = mode === "personal" ? await fundSummary(month) : null;
+  const actuals = mode === "personal" ? await monthlyActuals(month) : null;
+  const income = mode === "personal" && month >= currentMonth() ? await incomeProjection(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
   // who does not already suspect it.
@@ -138,9 +145,13 @@ export default async function OverviewPage({
         }
       />
 
-      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={fundTotals?.netCents ?? 0} />}
+      {actuals && <MonthlyActuals month={month} currentMonth={currentMonth()} totals={actuals} hasAccountGaps={unreconciled.length > 0} />}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {income && actuals && <IncomeOverview income={income} totals={actuals} />}
+
+      {spendingPlan && recordedFunds && <ExpenseOverview month={month} currentMonth={currentMonth()} plan={spendingPlan} funds={recordedFunds} />}
+
+      {mode === "business" && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label={words.income}
           value={formatCents(summary.incomeCents)}
@@ -177,27 +188,7 @@ export default async function OverviewPage({
               : "Share of income you kept"
           }
         />
-      </div>
-
-      {fundTotals && <Card className="mt-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg">Savings &amp; investments</h2>
-          <Link href="/settings#funds" className="btn">Manage funds</Link>
-        </div>
-        {fundTotals.byFund.length === 0 ? <p className="mt-3 text-sm text-[var(--color-ink-muted)]">Add your funds in Settings to track contributions separately from expenses.</p> : <>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
-            <Stat label="Net savings contributions" value={formatCents(fundTotals.savingsCents)} />
-            <Stat label="Net investment contributions" value={formatCents(fundTotals.investmentCents)} />
-            <Stat label="Left after contributions" value={formatCents(summary.netCents - fundTotals.netCents)} detail="Income minus spending and net fund contributions; not an account balance." />
-          </div>
-          <div className="mt-4 space-y-3">
-            {fundTotals.byFund.map((f) => <div key={f.id} className="flex flex-wrap justify-between gap-2 border-t border-[var(--color-border)] pt-3 text-sm">
-              <span>{f.name} <span className="text-[var(--color-ink-muted)]">· {f.kind === "savings" ? "Savings" : "Investment"}</span></span>
-              <span>Contributed {formatCents(f.contributedCents)} · Withdrawn {formatCents(f.withdrawnCents)}</span>
-            </div>)}
-          </div>
-        </>}
-      </Card>}
+      </div>}
 
       {unreconciled.length > 0 ? (
         <Card className="mt-4 border-[var(--color-warning)] bg-[var(--color-warning-soft)]">
@@ -283,15 +274,14 @@ export default async function OverviewPage({
             <h2 className="mb-3 text-lg">Recurring</h2>
             {subCount === 0 ? (
               <p className="text-sm text-[var(--color-ink-muted)]">
-                No subscriptions detected yet. Three or more regular charges
-                from the same merchant will show up here.
+                No recurring bills approved yet. <Link href="/recurring" className="underline">Review suggestions</Link> before including them in your forecast.
               </p>
             ) : (
               <>
                 <p className="figure text-2xl">{formatCents(subAnnual)}</p>
                 <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                  a year across {subCount} active{" "}
-                  {subCount === 1 ? "subscription" : "subscriptions"}
+                  a year across {subCount} approved{" "}
+                  {subCount === 1 ? "bill" : "bills"}
                 </p>
                 <Link
                   href="/recurring"
@@ -303,7 +293,7 @@ export default async function OverviewPage({
             )}
           </Card>
 
-          {budgets.lines.length > 0 ? (
+          {mode === "business" && budgets.lines.length > 0 ? (
             <Card>
               <h2 className="mb-3 text-lg">Budgets</h2>
               <ul className="space-y-2.5">

@@ -115,7 +115,7 @@ export function UploadForm({
           dragging ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]" : ""
         }`}
       >
-        <p className="display text-xl">Drop statements here</p>
+        <p className="display text-xl">Import statements</p>
         <p className="mt-1.5 max-w-sm text-sm text-[var(--color-ink-muted)]">
           {hasLlm
             ? "CSV exports, PDF statements, or screenshots. Upload as many as you like — overlapping periods are deduplicated."
@@ -127,11 +127,13 @@ export function UploadForm({
           type="file"
           multiple
           accept={hasLlm ? ".csv,.tsv,.txt,.pdf,image/*" : ".csv,.tsv,.txt"}
-          className="sr-only"
+          className="sr-only peer"
+          aria-label="Choose statement files"
+          disabled={busy}
           id="statement-file"
           onChange={(e) => e.target.files && void upload(e.target.files)}
         />
-        <label htmlFor="statement-file" className="btn btn-primary mt-5">
+        <label htmlFor="statement-file" className="btn btn-primary mt-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[var(--color-accent)]">
           {busy ? "Importing…" : "Choose files"}
         </label>
       </div>
