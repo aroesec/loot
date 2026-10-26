@@ -40,5 +40,5 @@ export function projectIncome({ month, plans, transactions, receivedIncomeCents 
     return { ...plan, payments, receivedCount, extraCount: Math.max(0, payments.length - plan.paymentsPerMonth), receivedCents: payments.reduce((sum, row) => sum + row.amountCents, 0), remainingCents: (plan.paymentsPerMonth - receivedCount) * plan.amountCents };
   });
   const remainingCents = sources.reduce((sum, source) => sum + source.remainingCents, 0);
-  return { sources, receivedIncomeCents, remainingCents, ambiguousCount, projectedIncomeCents: ambiguousCount ? null : receivedIncomeCents + remainingCents };
+  return { sources, plannedIncomeCents: sources.reduce((sum, source) => sum + source.amountCents * source.paymentsPerMonth, 0), receivedIncomeCents, remainingCents, ambiguousCount, projectedIncomeCents: ambiguousCount ? null : receivedIncomeCents + remainingCents };
 }

@@ -15,7 +15,7 @@ export async function incomeProjection(month: string) {
     db.select().from(incomePlans).where(lte(incomePlans.effectiveMonth, month)),
     db.select().from(transactions).where(and(gte(transactions.postedOn, start), lte(transactions.postedOn, end), gt(transactions.amountCents, 0), eq(transactions.isTransfer, false), eq(transactions.status, "cleared"))),
   ]);
-  return projectIncome({ month, plans, transactions: rows, receivedIncomeCents: rows.reduce((sum, row) => sum + row.amountCents, 0) });
+  return { ...projectIncome({ month, plans, transactions: rows, receivedIncomeCents: rows.reduce((sum, row) => sum + row.amountCents, 0) }), receipts: rows.sort((a, b) => a.postedOn.localeCompare(b.postedOn)) };
 }
 export async function recentPaychecks() {
   const rows = await db.select({ id: transactions.id, name: transactions.merchant, pattern: transactions.rawDescription, accountId: accounts.id, amountCents: transactions.amountCents, postedOn: transactions.postedOn })

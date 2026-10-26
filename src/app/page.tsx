@@ -1,8 +1,9 @@
 import { monthlyActuals } from "@/lib/planning/actuals";
 import { MonthlyActuals } from "@/components/monthly-actuals";
 import { budgetPlanning } from "@/lib/planning";
-import { listIncomePlans } from "@/lib/income";
+import { incomeProjection, listIncomePlans } from "@/lib/income";
 import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
+import { IncomeOverview } from "@/components/income-overview";
 import { ExpenseOverview } from "@/components/expense-overview";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -120,7 +121,8 @@ export default async function OverviewPage({
   const spendingPlan = mode === "personal" ? await budgetPlanning(month) : null;
   const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
   const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
-  const actuals = mode === "personal" && month < currentMonth() ? await monthlyActuals(month) : null;
+  const actuals = mode === "personal" ? await monthlyActuals(month) : null;
+  const income = mode === "personal" && month >= currentMonth() ? await incomeProjection(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
   // who does not already suspect it.
@@ -142,6 +144,8 @@ export default async function OverviewPage({
       />
 
       {actuals && <MonthlyActuals month={month} currentMonth={currentMonth()} totals={actuals} hasAccountGaps={unreconciled.length > 0} />}
+
+      {income && actuals && <IncomeOverview income={income} totals={actuals} />}
 
       {spendingPlan && <ExpenseOverview month={month} currentMonth={currentMonth()} plan={spendingPlan} />}
 
