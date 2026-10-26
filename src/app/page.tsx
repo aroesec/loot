@@ -1,10 +1,9 @@
 import { monthlyActuals } from "@/lib/planning/actuals";
 import { MonthlyActuals } from "@/components/monthly-actuals";
-import { allocationPlanning, budgetPlanning } from "@/lib/planning";
-import { incomeProjection, listIncomePlans } from "@/lib/income";
+import { budgetPlanning } from "@/lib/planning";
+import { listIncomePlans } from "@/lib/income";
 import { activeIncomePlans, incomeMonth } from "@/lib/income/logic";
-import { AllocationSummary } from "@/components/allocation-summary";
-import { IncomeSummary } from "@/components/income-summary";
+import { ExpenseOverview } from "@/components/expense-overview";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
@@ -118,12 +117,10 @@ export default async function OverviewPage({
   // A business has no savings rate and a person has no net margin. Showing
   // the wrong word invites reading a number that does not mean what it says.
   const words = vocabulary(mode);
-  const projection = mode === "personal" ? await incomeProjection(month) : null;
   const spendingPlan = mode === "personal" ? await budgetPlanning(month) : null;
   const subCount = spendingPlan ? spendingPlan.recurring.approved.length : Number(activeSubs[0]?.count ?? 0);
   const subAnnual = spendingPlan ? spendingPlan.recurring.approved.reduce((sum, bill) => sum + bill.amountCents * 12, 0) : Number(activeSubs[0]?.annual ?? 0);
-  const allocations = mode === "personal" ? await allocationPlanning(month) : null;
-  const actuals = mode === "personal" ? await monthlyActuals(month) : null;
+  const actuals = mode === "personal" && month < currentMonth() ? await monthlyActuals(month) : null;
   // Surfaced here rather than only on /cards: a card nobody has linked is the
   // largest silent gap a ledger can have, and it will not be found by someone
   // who does not already suspect it.
@@ -146,8 +143,7 @@ export default async function OverviewPage({
 
       {actuals && <MonthlyActuals month={month} currentMonth={currentMonth()} totals={actuals} hasAccountGaps={unreconciled.length > 0} />}
 
-      {projection && projection.sources.length > 0 && <IncomeSummary projection={projection} spendCents={summary.spendCents} contributionCents={allocations?.forecastCents ?? 0} plannedSpendCents={spendingPlan?.forecastCents} />}
-      {projection && allocations && spendingPlan && <AllocationSummary month={month} incomeCents={projection.projectedIncomeCents} expensesCents={spendingPlan.forecastCents} funds={allocations} />}
+      {spendingPlan && <ExpenseOverview month={month} currentMonth={currentMonth()} plan={spendingPlan} />}
 
       {mode === "business" && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
@@ -291,7 +287,7 @@ export default async function OverviewPage({
             )}
           </Card>
 
-          {budgets.lines.length > 0 ? (
+          {mode === "business" && budgets.lines.length > 0 ? (
             <Card>
               <h2 className="mb-3 text-lg">Budgets</h2>
               <ul className="space-y-2.5">
