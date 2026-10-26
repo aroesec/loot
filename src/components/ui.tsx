@@ -59,7 +59,7 @@ export function Stat({
 
   return (
     <Card>
-      <div className="text-xs uppercase tracking-wide text-[var(--color-ink-faint)]">
+      <div className="text-xs uppercase tracking-wide text-[var(--color-ink-muted)]">
         {label}
       </div>
       <div className={`figure mt-2 text-2xl ${toneClass}`}>{value}</div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ThemeToggle } from "./theme-toggle";
 import { usePathname } from "next/navigation";
 
 /**
@@ -50,11 +51,11 @@ export function Nav({ mode = "personal" }: { mode?: "personal" | "business" }) {
       aria-label="Main navigation"
       className="min-w-0 shrink-0 border-b border-[var(--color-border)] px-4 py-3 sm:px-5 lg:w-56 lg:border-b-0 lg:border-r lg:px-6 lg:py-8"
     >
-      <div className="flex items-center justify-between gap-4 lg:hidden">
+      <div className="flex items-center justify-between gap-3 lg:mb-6">
         <Link href="/" className="display flex min-h-11 items-center text-2xl">
           Loot
         </Link>
-        <span className="truncate text-sm text-[var(--color-ink-muted)]">
+        <span className="ml-auto truncate text-sm text-[var(--color-ink-muted)] lg:hidden">
           {
             links.find((link) =>
               link.href === "/"
@@ -63,6 +64,7 @@ export function Nav({ mode = "personal" }: { mode?: "personal" | "business" }) {
             )?.label
           }
         </span>
+        <ThemeToggle />
       </div>
       <details
         className="mt-1 lg:hidden"
@@ -87,9 +89,6 @@ export function Nav({ mode = "personal" }: { mode?: "personal" | "business" }) {
         </ul>
       </details>
       <div className="hidden lg:block">
-        <Link href="/" className="display mb-6 flex items-baseline text-2xl">
-          Loot
-        </Link>
         <ul className="flex flex-col gap-0.5">{items}</ul>
       </div>
     </nav>

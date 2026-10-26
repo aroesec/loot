@@ -26,20 +26,32 @@ export async function DataHealth() {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-2.5 text-sm">
       {worst ? (
-        <Link href={worst.href} className="flex items-center gap-2 hover:underline">
-          <span aria-hidden className="inline-block size-2 rounded-full bg-[var(--color-warning)]" />
+        <Link
+          href={worst.href}
+          className="flex min-h-11 min-w-0 items-center gap-2 hover:underline"
+        >
+          <span
+            aria-hidden
+            className="inline-block size-2 shrink-0 rounded-full bg-[var(--color-warning)]"
+          />
           <span>
             {worst.summary}
             <span className="ml-1.5 text-[var(--color-ink-muted)]">
-              {formatCents(worst.amountCents)}
+              · {formatCents(worst.amountCents)}
             </span>
           </span>
         </Link>
       ) : null}
 
       {gap ? (
-        <Link href={gap.href} className="flex items-center gap-2 hover:underline">
-          <span aria-hidden className="inline-block size-2 rounded-full bg-[var(--color-accent)]" />
+        <Link
+          href={gap.href}
+          className="flex min-h-11 min-w-0 items-center gap-2 hover:underline"
+        >
+          <span
+            aria-hidden
+            className="inline-block size-2 shrink-0 rounded-full bg-[var(--color-accent)]"
+          />
           <span>{gap.prompt}</span>
         </Link>
       ) : null}
@@ -47,9 +59,9 @@ export async function DataHealth() {
       {issues.length + gaps.length > 2 ? (
         <Link
           href="/review"
-          className="ml-auto text-xs text-[var(--color-ink-muted)] hover:underline"
+          className="ml-auto inline-flex min-h-11 items-center text-sm underline underline-offset-4"
         >
-          {issues.length + gaps.length - 2} more
+          Review all ({issues.length + gaps.length})
         </Link>
       ) : null}
     </div>
